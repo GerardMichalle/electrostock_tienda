@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, User } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useFlyToCart } from "@/lib/fly-to-cart";
 import { useCategories } from "@/lib/admin-store";
@@ -75,13 +75,6 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="/cuenta"
-            className="hidden items-center gap-1.5 text-sm font-medium text-text-muted transition hover:text-accent sm:inline-flex"
-          >
-            <User className="h-4 w-4" strokeWidth={1.75} />
-            Iniciar sesión
-          </Link>
           <Link
             ref={cartRef}
             href="/carrito"

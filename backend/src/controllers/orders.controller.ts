@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { HttpError } from "../lib/errors";
 import { generateOrderNumber } from "../utils/slugify";
-import { uploadUrl } from "../middleware/upload";
+import { saveUpload } from "../middleware/upload";
 import { buildOrderPdf } from "../utils/order-pdf";
 
 const ORDER_STATUSES = [
@@ -68,6 +68,8 @@ export async function createOrder(req: Request, res: Response) {
     0
   );
 
+  const receiptUrl = await saveUpload(file, "receipts");
+
   const order = await prisma.order.create({
     data: {
       orderNumber: generateOrderNumber(),
@@ -76,7 +78,7 @@ export async function createOrder(req: Request, res: Response) {
       address: parsed.data.address,
       district: parsed.data.district,
       paymentMethod: parsed.data.paymentMethod,
-      receiptUrl: uploadUrl("receipts", file.filename),
+      receiptUrl,
       total,
       items: { create: orderItemsData },
     },

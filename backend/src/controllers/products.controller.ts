@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { HttpError } from "../lib/errors";
 import { slugify } from "../utils/slugify";
-import { removeUpload, uploadUrl } from "../middleware/upload";
+import { removeUpload, saveUploads } from "../middleware/upload";
 
 const stockEnum = z.enum(["EN_STOCK", "AGOTADO", "BAJO_PEDIDO"]);
 
@@ -89,6 +89,7 @@ export async function createProduct(req: Request, res: Response) {
   }
 
   const slug = slugify(`${data.name}-${data.sku}`);
+  const imageUrls = await saveUploads(files, "products");
 
   const product = await prisma.product.create({
     data: {
@@ -103,10 +104,7 @@ export async function createProduct(req: Request, res: Response) {
       description: data.description,
       videoUrl: data.videoUrl || undefined,
       images: {
-        create: files.map((file, index) => ({
-          url: uploadUrl("products", file.filename),
-          order: index,
-        })),
+        create: imageUrls.map((url, index) => ({ url, order: index })),
       },
     },
     include: { images: true },
@@ -143,6 +141,7 @@ export async function updateProduct(req: Request, res: Response) {
   }
 
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  const newImageUrls = files.length > 0 ? await saveUploads(files, "products") : [];
 
   const updated = await prisma.product.update({
     where: { id },
@@ -156,13 +155,10 @@ export async function updateProduct(req: Request, res: Response) {
       spec: data.spec,
       description: data.description,
       videoUrl: data.videoUrl || undefined,
-      ...(files.length > 0
+      ...(newImageUrls.length > 0
         ? {
             images: {
-              create: files.map((file, index) => ({
-                url: uploadUrl("products", file.filename),
-                order: index,
-              })),
+              create: newImageUrls.map((url, index) => ({ url, order: index })),
             },
           }
         : {}),
@@ -197,8 +193,8 @@ export async function deleteProduct(req: Request, res: Response) {
     throw err;
   }
 
-  // Borra también las fotos del disco (las filas se borran en cascada).
-  product.images.forEach((img) => removeUpload(img.url));
+  // Borra también las fotos de Cloudinary (las filas se borran en cascada).
+  await Promise.all(product.images.map((img) => removeUpload(img.url)));
   res.status(204).send();
 }
 
@@ -207,6 +203,6 @@ export async function deleteProductImage(req: Request, res: Response) {
   const image = await prisma.productImage.findUnique({ where: { id: imageId } });
   if (!image) throw new HttpError(404, "Imagen no encontrada.");
   await prisma.productImage.delete({ where: { id: imageId } });
-  removeUpload(image.url);
+  await removeUpload(image.url);
   res.status(204).send();
 }

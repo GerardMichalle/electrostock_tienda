@@ -82,7 +82,35 @@ function seedPhotoUrl(n: number): string {
   }
 }
 
+// `SEED_MODE=admin` → solo crea/actualiza el usuario admin (para producción,
+// donde el cliente arma su propio catálogo). Cualquier otro valor → siembra
+// completa con datos de ejemplo (desarrollo local).
+const ADMIN_ONLY = process.env.SEED_MODE === "admin";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@electrostock.pe";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin1234";
+
+async function upsertAdmin() {
+  console.log(`Creando/actualizando usuario admin (${ADMIN_EMAIL})…`);
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  await prisma.user.upsert({
+    where: { email: ADMIN_EMAIL },
+    update: { passwordHash },
+    create: {
+      email: ADMIN_EMAIL,
+      passwordHash,
+      name: "Admin ElectroStock",
+      role: "ADMIN",
+    },
+  });
+}
+
 async function main() {
+  if (ADMIN_ONLY) {
+    await upsertAdmin();
+    console.log("\nModo admin: sin datos de ejemplo. Catálogo vacío listo para el cliente.");
+    return;
+  }
+
   console.log("Sembrando categorías y subcategorías…");
 
   const categoryMap = new Map<string, { id: string; subs: Map<string, string> }>();
@@ -116,18 +144,7 @@ async function main() {
     categoryMap.set(cat.name, { id: category.id, subs });
   }
 
-  console.log("Creando usuario admin de prueba…");
-  const passwordHash = await bcrypt.hash("admin1234", 10);
-  await prisma.user.upsert({
-    where: { email: "admin@electrostock.pe" },
-    update: {},
-    create: {
-      email: "admin@electrostock.pe",
-      passwordHash,
-      name: "Admin ElectroStock",
-      role: "ADMIN",
-    },
-  });
+  await upsertAdmin();
 
   console.log(`Creando ${productsSeed.length} productos de ejemplo…`);
   for (const p of productsSeed) {
