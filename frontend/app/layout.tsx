@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart-context";
+import { FlyToCartProvider } from "@/lib/fly-to-cart";
 
 // NOTA: en este entorno de sandbox no hay salida a fonts.googleapis.com,
 // por eso usamos una pila de fuentes de sistema como fallback temporal.
@@ -41,7 +42,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-bg text-text">
-        <CartProvider>{children}</CartProvider>
+        <CartProvider>
+          <FlyToCartProvider>{children}</FlyToCartProvider>
+        </CartProvider>
       </body>
     </html>
   );

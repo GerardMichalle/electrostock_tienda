@@ -3,15 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useAdminProducts } from "@/lib/admin-store";
 import ProductForm from "@/components/admin/ProductForm";
-import type { Product } from "@/lib/data";
 
 export default function NewProductPage() {
   const router = useRouter();
   const { createProduct } = useAdminProducts();
 
-  function handleSubmit(product: Product) {
-    createProduct(product);
-    router.push("/admin/productos");
+  async function handleSubmit(formData: FormData) {
+    const res = await createProduct(formData);
+    if (res.ok) router.push("/admin/productos");
+    return res;
   }
 
   return (

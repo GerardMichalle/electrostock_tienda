@@ -1,10 +1,16 @@
+"use client";
+
 import Image from "next/image";
+import Link from "next/link";
+import { useCategories } from "@/lib/admin-store";
 import logoFull from "@/src/img/logo-full.png";
 import yapeLogo from "@/src/img/yape-badge.png";
 import plinLogo from "@/src/img/plin-badge.png";
 import libroReclamaciones from "@/src/img/libro_reclamaciones.png";
 
 export default function Footer() {
+  const categories = useCategories();
+
   return (
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
@@ -26,9 +32,16 @@ export default function Footer() {
             Catálogo
           </h4>
           <ul className="mt-3 space-y-2 text-sm text-text-muted">
-            <li>Sensores</li>
-            <li>Actuadores</li>
-            <li>Controladores</li>
+            {categories.map((cat) => (
+              <li key={cat.slug}>
+                <Link
+                  href={`/${cat.slug}`}
+                  className="transition hover:text-accent"
+                >
+                  {cat.name}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 

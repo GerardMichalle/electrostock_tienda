@@ -7,14 +7,26 @@ import Footer from "@/components/Footer";
 import Breadcrumb from "@/components/Breadcrumb";
 import CategorySidebar from "@/components/CategorySidebar";
 import ProductCard from "@/components/ProductCard";
-import { useAdminProducts, useCategories } from "@/lib/admin-store";
+import { useProducts, useCategoriesState } from "@/lib/admin-store";
 
 export default function CategoryPage() {
   const { category: categorySlug } = useParams<{ category: string }>();
-  const categories = useCategories();
-  const { products, ready } = useAdminProducts();
+  const { categories, loading: catLoading } = useCategoriesState();
+  const { products, ready } = useProducts();
 
   const category = categories.find((c) => c.slug === categorySlug);
+
+  if (catLoading && !category) {
+    return (
+      <>
+        <Header />
+        <main className="flex flex-1 items-center justify-center px-4 py-16">
+          <p className="font-mono text-sm text-text-muted">Cargando…</p>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   if (!category) {
     return (

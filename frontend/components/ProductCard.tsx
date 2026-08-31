@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Search, ShoppingCart } from "lucide-react";
 import type { Product } from "@/lib/data";
 import ProductImage from "@/components/ProductImage";
 import QuickViewModal from "@/components/QuickViewModal";
 import { useCart } from "@/lib/cart-context";
+import { useFlyToCart } from "@/lib/fly-to-cart";
 
 const stockStyles: Record<Product["stock"], string> = {
   "En stock": "bg-accent-cyan/10 text-sky-700",
@@ -17,21 +18,30 @@ const stockStyles: Record<Product["stock"], string> = {
 export default function ProductCard({ product }: { product: Product }) {
   const href = `/${product.categorySlug}/${product.subcategorySlug}/${product.slug}`;
   const { addItem } = useCart();
+  const { flyToCart } = useFlyToCart();
+  const imageRef = useRef<HTMLDivElement>(null);
   const [added, setAdded] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const soldOut = product.stock === "Agotado";
 
   function handleAdd() {
-    addItem({
-      slug: product.slug,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      categorySlug: product.categorySlug,
-      subcategorySlug: product.subcategorySlug,
-    });
+    if (!product.id) return;
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
+    flyToCart({
+      origin: imageRef.current,
+      image: product.image,
+      onArrive: () =>
+        addItem({
+          productId: product.id!,
+          slug: product.slug,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          categorySlug: product.categorySlug,
+          subcategorySlug: product.subcategorySlug,
+        }),
+    });
   }
 
   return (
@@ -39,11 +49,11 @@ export default function ProductCard({ product }: { product: Product }) {
       <span className="cm-tr" />
       <span className="cm-br" />
 
-      <div className="relative">
+      <div className="relative" ref={imageRef}>
         <Link
           href={href}
           aria-label={product.name}
-          className="flex aspect-square items-center justify-center border-b border-border bg-surface"
+          className="flex aspect-4/3 items-center justify-center border-b border-border bg-surface"
         >
           <ProductImage src={product.image} alt={product.name} />
         </Link>
@@ -59,23 +69,23 @@ export default function ProductCard({ product }: { product: Product }) {
 
       <Link
         href={href}
-        className="flex flex-1 flex-col gap-2 p-3 sm:gap-2.5 sm:p-4"
+        className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2"
       >
         <div>
           <p className="select-text font-mono text-[10px] uppercase tracking-wider text-text-muted sm:text-[11px]">
             SKU {product.sku}
           </p>
-          <h3 className="mt-1 line-clamp-2 select-text font-display text-[13px] font-semibold leading-snug sm:text-[15px]">
+          <h3 className="mt-1 line-clamp-2 select-text font-display text-[13px] font-semibold leading-snug sm:text-sm">
             {product.name}
           </h3>
         </div>
 
-        <p className="line-clamp-1 font-mono text-[11px] text-text-muted sm:text-xs">
+        <p className="line-clamp-1 font-mono text-[11px] text-text-muted">
           {product.spec}
         </p>
 
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-dashed border-border pt-2.5">
-          <span className="select-text font-display text-base font-bold text-accent sm:text-lg">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-dashed border-border pt-2">
+          <span className="select-text font-display text-[15px] font-bold text-accent sm:text-base">
             S/ {product.price.toFixed(2)}
           </span>
           <span
@@ -86,11 +96,11 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
       </Link>
 
-      <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+      <div className="px-3 pb-3">
         <button
           onClick={handleAdd}
           disabled={soldOut}
-          className="flex w-full items-center justify-center gap-1.5 border border-accent bg-accent py-2 text-xs font-medium text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-muted sm:text-sm"
+          className="flex w-full items-center justify-center gap-1.5 border border-accent bg-accent py-1.5 text-xs font-medium text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-muted sm:text-sm"
         >
           {soldOut ? (
             "No disponible"

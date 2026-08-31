@@ -2,9 +2,8 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
 import CategoryGrid from "@/components/CategoryGrid";
-import ProductCard from "@/components/ProductCard";
+import NovedadesGrid from "@/components/NovedadesGrid";
 import SoftwareCarousel from "@/components/SoftwareCarousel";
-import { products } from "@/lib/data";
 
 export default function Home() {
   return (
@@ -22,19 +21,7 @@ export default function Home() {
 
         <section id="novedades" className="border-t border-border bg-surface">
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-2xl font-semibold">
-                Novedades
-              </h2>
-              <span className="font-mono text-xs text-text-muted">
-                {products.length} productos
-              </span>
-            </div>
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
-              {products.map((product) => (
-                <ProductCard key={product.slug} product={product} />
-              ))}
-            </div>
+            <NovedadesGrid />
           </div>
         </section>
 

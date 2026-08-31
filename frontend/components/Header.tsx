@@ -1,23 +1,42 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, User } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
+import { useFlyToCart } from "@/lib/fly-to-cart";
 import { useCategories } from "@/lib/admin-store";
+import AnnouncementBar from "@/components/AnnouncementBar";
 import logoMark from "@/src/img/logo-mark.png";
 
 export default function Header() {
   const { totalItems } = useCart();
+  const { setCartTarget, arrivals } = useFlyToCart();
   const categories = useCategories();
+
+  const cartRef = useRef<HTMLAnchorElement>(null);
+  const [bumping, setBumping] = useState(false);
+  const firstArrival = useRef(true);
+
+  useEffect(() => {
+    setCartTarget(cartRef.current);
+    return () => setCartTarget(null);
+  }, [setCartTarget]);
+
+  useEffect(() => {
+    if (firstArrival.current) {
+      firstArrival.current = false;
+      return;
+    }
+    setBumping(true);
+    const id = setTimeout(() => setBumping(false), 480);
+    return () => clearTimeout(id);
+  }, [arrivals]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg/95 backdrop-blur">
-      <div className="border-b border-border bg-accent">
-        <div className="mx-auto max-w-7xl px-4 py-1.5 text-center font-mono text-[11px] tracking-wide text-white sm:px-6">
-          Envio a todo el Perú por compras mayores a S/150
-        </div>
-      </div>
+      <AnnouncementBar />
 
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:gap-6 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
@@ -64,11 +83,19 @@ export default function Header() {
             Iniciar sesión
           </Link>
           <Link
+            ref={cartRef}
             href="/carrito"
-            className="inline-flex items-center gap-1.5 border border-accent bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent-dark"
+            className={`inline-flex items-center gap-1.5 border border-accent bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent-dark ${
+              bumping ? "cart-bump" : ""
+            }`}
           >
             <ShoppingCart className="h-4 w-4" strokeWidth={1.75} />
-            Carrito ({totalItems})
+            <span>
+              Carrito{" "}
+              <span key={totalItems} className="cart-count inline-block">
+                ({totalItems})
+              </span>
+            </span>
           </Link>
         </div>
       </div>

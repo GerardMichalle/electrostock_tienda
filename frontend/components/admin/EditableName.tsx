@@ -3,18 +3,21 @@
 import { useState } from "react";
 import { Check, Pencil, X } from "lucide-react";
 
+type SaveResult = { ok: boolean; error?: string };
+
 export default function EditableName({
   value,
   onSave,
   className = "",
 }: {
   value: string;
-  onSave: (next: string) => { ok: boolean; error?: string };
+  onSave: (next: string) => SaveResult | Promise<SaveResult>;
   className?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   function start() {
     setDraft(value);
@@ -22,12 +25,14 @@ export default function EditableName({
     setEditing(true);
   }
 
-  function commit() {
+  async function commit() {
     if (draft.trim() === value) {
       setEditing(false);
       return;
     }
-    const res = onSave(draft);
+    setSaving(true);
+    const res = await onSave(draft);
+    setSaving(false);
     if (!res.ok) {
       setError(res.error ?? "No se pudo guardar.");
       return;
@@ -60,16 +65,17 @@ export default function EditableName({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
+            if (e.key === "Enter") void commit();
             if (e.key === "Escape") setEditing(false);
           }}
           className="w-44 border border-border bg-bg px-2 py-1 text-sm outline-none focus:border-accent"
         />
         <button
           type="button"
-          onClick={commit}
+          onClick={() => void commit()}
+          disabled={saving}
           aria-label="Guardar"
-          className="flex h-7 w-7 items-center justify-center border border-accent bg-accent text-white transition hover:bg-accent-dark"
+          className="flex h-7 w-7 items-center justify-center border border-accent bg-accent text-white transition hover:bg-accent-dark disabled:opacity-60"
         >
           <Check className="h-3.5 w-3.5" strokeWidth={2} />
         </button>

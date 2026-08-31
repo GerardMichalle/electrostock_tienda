@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Check, Minus, Plus, X } from "lucide-react";
+import { Minus, Plus, X } from "lucide-react";
 import type { Product } from "@/lib/data";
 import ProductGallery from "@/components/ProductGallery";
 import { useCart } from "@/lib/cart-context";
+import { useFlyToCart } from "@/lib/fly-to-cart";
 
 const stockStyles: Record<Product["stock"], string> = {
   "En stock": "bg-accent-cyan/10 text-sky-700",
@@ -22,8 +23,9 @@ export default function QuickViewModal({
   onClose: () => void;
 }) {
   const { addItem } = useCart();
+  const { flyToCart } = useFlyToCart();
+  const galleryRef = useRef<HTMLDivElement>(null);
   const [qty, setQty] = useState(1);
-  const [added, setAdded] = useState(false);
   const soldOut = product.stock === "Agotado";
   const href = `/${product.categorySlug}/${product.subcategorySlug}/${product.slug}`;
 
@@ -41,19 +43,27 @@ export default function QuickViewModal({
   }, [onClose]);
 
   function handleAdd() {
-    addItem(
-      {
-        slug: product.slug,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        categorySlug: product.categorySlug,
-        subcategorySlug: product.subcategorySlug,
-      },
-      qty,
-    );
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1800);
+    if (!product.id) return;
+    // flyToCart captura la posición de la galería de forma síncrona, así que
+    // podemos cerrar el modal enseguida y el clon vuela sobre el header visible.
+    flyToCart({
+      origin: galleryRef.current,
+      image: product.image,
+      onArrive: () =>
+        addItem(
+          {
+            productId: product.id!,
+            slug: product.slug,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            categorySlug: product.categorySlug,
+            subcategorySlug: product.subcategorySlug,
+          },
+          qty,
+        ),
+    });
+    onClose();
   }
 
   if (typeof document === "undefined") return null;
@@ -80,11 +90,13 @@ export default function QuickViewModal({
         </button>
 
         <div className="grid gap-6 p-5 sm:grid-cols-2 sm:p-6">
-          <ProductGallery
-            gallery={product.gallery}
-            videoUrl={product.videoUrl}
-            productName={product.name}
-          />
+          <div ref={galleryRef}>
+            <ProductGallery
+              gallery={product.gallery}
+              videoUrl={product.videoUrl}
+              productName={product.name}
+            />
+          </div>
 
           <div className="flex flex-col">
             <p className="select-text font-mono text-[11px] uppercase tracking-wider text-text-muted">
@@ -142,16 +154,7 @@ export default function QuickViewModal({
                 disabled={soldOut}
                 className="flex flex-1 items-center justify-center gap-1.5 border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-muted"
               >
-                {soldOut ? (
-                  "No disponible"
-                ) : added ? (
-                  <>
-                    <Check className="h-4 w-4" strokeWidth={2} />
-                    Añadido al carrito
-                  </>
-                ) : (
-                  "Añadir al carrito"
-                )}
+                {soldOut ? "No disponible" : "Añadir al carrito"}
               </button>
             </div>
 

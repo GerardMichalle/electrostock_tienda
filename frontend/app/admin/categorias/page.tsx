@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, ChevronUp, Plus, Trash2 } from "lucide-react";
-import { useAdminCategories, useAdminProducts } from "@/lib/admin-store";
+import { useAdminCategories, useProducts } from "@/lib/admin-store";
 import EditableName from "@/components/admin/EditableName";
 
 export default function AdminCategoriesPage() {
   const {
     categories,
+    loading,
+    error,
     createCategory,
     renameCategory,
     deleteCategory,
@@ -16,9 +18,8 @@ export default function AdminCategoriesPage() {
     renameSubcategory,
     deleteSubcategory,
     moveSubcategory,
-    resetCategories,
   } = useAdminCategories();
-  const { products } = useAdminProducts();
+  const { products } = useProducts();
 
   const [newCat, setNewCat] = useState("");
   const [catError, setCatError] = useState("");
@@ -44,9 +45,9 @@ export default function AdminCategoriesPage() {
     });
   }
 
-  function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    const res = createCategory(newCat);
+    const res = await createCategory(newCat);
     if (!res.ok) {
       setCatError(res.error ?? "No se pudo crear.");
       return;
@@ -55,19 +56,17 @@ export default function AdminCategoriesPage() {
     setCatError("");
   }
 
-  function handleDeleteCat(slug: string, name: string) {
-    const n = countByCat(slug);
-    const res = deleteCategory(slug, n);
+  async function handleDeleteCat(slug: string) {
+    const res = await deleteCategory(slug);
     if (!res.ok) {
       setError(`cat:${slug}`, res.error ?? "No se pudo eliminar.");
       return;
     }
     clearError(`cat:${slug}`);
-    void name;
   }
 
-  function handleAddSub(catSlug: string) {
-    const res = createSubcategory(catSlug, newSub[catSlug] ?? "");
+  async function handleAddSub(catSlug: string) {
+    const res = await createSubcategory(catSlug, newSub[catSlug] ?? "");
     if (!res.ok) {
       setError(`sub-new:${catSlug}`, res.error ?? "No se pudo crear.");
       return;
@@ -76,9 +75,8 @@ export default function AdminCategoriesPage() {
     clearError(`sub-new:${catSlug}`);
   }
 
-  function handleDeleteSub(catSlug: string, subSlug: string) {
-    const n = countBySub(catSlug, subSlug);
-    const res = deleteSubcategory(catSlug, subSlug, n);
+  async function handleDeleteSub(catSlug: string, subSlug: string) {
+    const res = await deleteSubcategory(catSlug, subSlug);
     if (!res.ok) {
       setError(`sub:${catSlug}:${subSlug}`, res.error ?? "No se pudo eliminar.");
       return;
@@ -88,26 +86,20 @@ export default function AdminCategoriesPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Categorías</h1>
-          <p className="mt-1 text-sm text-text-muted">
-            {categories.length} categoría{categories.length === 1 ? "" : "s"}. Los
-            cambios se reflejan en la tienda al instante.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm("¿Restaurar las categorías de ejemplo? Se perderán tus cambios.")) {
-              resetCategories();
-            }
-          }}
-          className="border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-accent hover:text-accent"
-        >
-          Restaurar ejemplo
-        </button>
+      <div>
+        <h1 className="font-display text-2xl font-bold">Categorías</h1>
+        <p className="mt-1 text-sm text-text-muted">
+          {loading
+            ? "Cargando…"
+            : `${categories.length} categoría${categories.length === 1 ? "" : "s"}. Los cambios se reflejan en la tienda al instante.`}
+        </p>
       </div>
+
+      {error && (
+        <p className="mt-4 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {error}
+        </p>
+      )}
 
       <form
         onSubmit={handleCreate}
@@ -151,7 +143,7 @@ export default function AdminCategoriesPage() {
                 <div className="flex shrink-0 flex-col">
                   <button
                     type="button"
-                    onClick={() => moveCategory(cat.slug, -1)}
+                    onClick={() => void moveCategory(cat.slug, -1)}
                     disabled={index === 0}
                     aria-label="Subir categoría"
                     className="text-text-muted transition hover:text-accent disabled:opacity-30"
@@ -160,7 +152,7 @@ export default function AdminCategoriesPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => moveCategory(cat.slug, 1)}
+                    onClick={() => void moveCategory(cat.slug, 1)}
                     disabled={index === categories.length - 1}
                     aria-label="Bajar categoría"
                     className="text-text-muted transition hover:text-accent disabled:opacity-30"
@@ -199,7 +191,7 @@ export default function AdminCategoriesPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteCat(cat.slug, cat.name)}
+                    onClick={() => void handleDeleteCat(cat.slug)}
                     aria-label={`Eliminar ${cat.name}`}
                     className="flex h-8 w-8 items-center justify-center border border-border text-text-muted transition hover:border-red-400 hover:text-red-600"
                   >
@@ -232,7 +224,7 @@ export default function AdminCategoriesPage() {
                             <div className="flex shrink-0 flex-col">
                               <button
                                 type="button"
-                                onClick={() => moveSubcategory(cat.slug, sub.slug, -1)}
+                                onClick={() => void moveSubcategory(cat.slug, sub.slug, -1)}
                                 disabled={subIndex === 0}
                                 aria-label="Subir subcategoría"
                                 className="text-text-muted transition hover:text-accent disabled:opacity-30"
@@ -241,7 +233,7 @@ export default function AdminCategoriesPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => moveSubcategory(cat.slug, sub.slug, 1)}
+                                onClick={() => void moveSubcategory(cat.slug, sub.slug, 1)}
                                 disabled={subIndex === cat.subcategories.length - 1}
                                 aria-label="Bajar subcategoría"
                                 className="text-text-muted transition hover:text-accent disabled:opacity-30"
@@ -266,7 +258,7 @@ export default function AdminCategoriesPage() {
 
                             <button
                               type="button"
-                              onClick={() => handleDeleteSub(cat.slug, sub.slug)}
+                              onClick={() => void handleDeleteSub(cat.slug, sub.slug)}
                               aria-label={`Eliminar ${sub.name}`}
                               className="flex h-7 w-7 shrink-0 items-center justify-center border border-border text-text-muted transition hover:border-red-400 hover:text-red-600"
                             >
@@ -293,7 +285,7 @@ export default function AdminCategoriesPage() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          handleAddSub(cat.slug);
+                          void handleAddSub(cat.slug);
                         }
                       }}
                       placeholder="Nueva subcategoría"
@@ -301,7 +293,7 @@ export default function AdminCategoriesPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => handleAddSub(cat.slug)}
+                      onClick={() => void handleAddSub(cat.slug)}
                       className="flex items-center gap-1.5 border border-accent bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent-dark"
                     >
                       <Plus className="h-4 w-4" strokeWidth={2} />

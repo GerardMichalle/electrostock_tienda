@@ -6,7 +6,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useCart } from "@/lib/cart-context";
-import ProductImage from "@/components/ProductImage";
+import { apiFetch, ApiError } from "@/lib/api";
 import yapeBadge from "@/src/img/yape-badge.png";
 import plinBadge from "@/src/img/plin-badge.png";
 import yapeQr from "@/src/img/yape-qr.png";
@@ -47,8 +47,11 @@ export default function CheckoutPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [receipt, setReceipt] = useState<string | null>(null);
+  const [district, setDistrict] = useState("");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
 
@@ -57,14 +60,14 @@ export default function CheckoutPage() {
 
   function handleReceiptUpload(file: File | null) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setReceipt(reader.result);
-    };
-    reader.readAsDataURL(file);
+    setReceiptFile(file);
+    setReceiptPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -72,15 +75,42 @@ export default function CheckoutPage() {
       setError("Completa tus datos de contacto y dirección de entrega.");
       return;
     }
-    if (!receipt) {
+    if (!receiptFile) {
       setError(`Sube la captura de tu pago por ${activeMethod.label}.`);
       return;
     }
 
-    const number = `ES-${Date.now().toString().slice(-8)}`;
-    setOrderNumber(number);
-    setOrderPlaced(true);
-    clearCart();
+    const fd = new FormData();
+    fd.append("customerName", name.trim());
+    fd.append("customerPhone", phone.trim());
+    fd.append("address", address.trim());
+    if (district.trim()) fd.append("district", district.trim());
+    fd.append("paymentMethod", method === "yape" ? "YAPE" : "PLIN");
+    fd.append("receipt", receiptFile);
+    fd.append(
+      "items",
+      JSON.stringify(items.map((i) => ({ productId: i.productId, qty: i.qty }))),
+    );
+
+    setSubmitting(true);
+    try {
+      const order = await apiFetch<{ orderNumber: string }>("/api/orders", {
+        method: "POST",
+        body: fd,
+      });
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+      setOrderNumber(order.orderNumber);
+      setOrderPlaced(true);
+      clearCart();
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "No se pudo enviar el pedido. Inténtalo de nuevo.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (orderPlaced) {
@@ -144,7 +174,7 @@ export default function CheckoutPage() {
           <h1 className="font-display text-2xl font-bold sm:text-3xl">Pagar</h1>
 
           <form
-            onSubmit={handleSubmit}
+            onSubmit={(e) => void handleSubmit(e)}
             noValidate
             className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]"
           >
@@ -181,6 +211,8 @@ export default function CheckoutPage() {
                       Distrito
                     </label>
                     <input
+                      value={district}
+                      onChange={(e) => setDistrict(e.target.value)}
                       className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
                       placeholder="La libertad, Trujillo"
                     />
@@ -283,9 +315,14 @@ export default function CheckoutPage() {
                     Sube la captura de tu pago
                   </label>
                   <label className="flex h-24 cursor-pointer items-center justify-center border border-dashed border-border font-mono text-xs text-text-muted transition hover:border-accent hover:text-accent">
-                    {receipt ? (
+                    {receiptPreview ? (
                       <div className="h-20 w-20 overflow-hidden border border-border">
-                        <ProductImage src={receipt} alt="Comprobante de pago" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={receiptPreview}
+                          alt="Comprobante de pago"
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                     ) : (
                       "+ Subir captura del comprobante"
@@ -337,9 +374,10 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                className="mt-5 w-full border border-accent bg-accent py-3 text-sm font-medium text-white transition hover:bg-accent-dark"
+                disabled={submitting}
+                className="mt-5 w-full border border-accent bg-accent py-3 text-sm font-medium text-white transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-muted"
               >
-                Confirmar pedido
+                {submitting ? "Enviando pedido…" : "Confirmar pedido"}
               </button>
             </div>
           </form>

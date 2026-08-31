@@ -10,6 +10,8 @@ import {
 } from "react";
 
 export type CartItem = {
+  /** id del producto en la base — necesario para enviar el pedido a la API. */
+  productId: string;
   slug: string;
   name: string;
   price: number;
@@ -38,15 +40,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
 
+  // Hidratamos el carrito desde localStorage una sola vez tras el montaje
+  // (no en el initializer de useState para evitar desajustes de hidratación).
   useEffect(() => {
+    let stored: CartItem[] = [];
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {
-        setItems(JSON.parse(raw));
+        const parsed = JSON.parse(raw) as CartItem[];
+        // Descarta ítems de un carrito viejo sin productId (antes del backend).
+        stored = Array.isArray(parsed)
+          ? parsed.filter((i) => i && typeof i.productId === "string")
+          : [];
       } catch {
-        setItems([]);
+        stored = [];
       }
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial puntual
+    setItems(stored);
     setReady(true);
   }, []);
 

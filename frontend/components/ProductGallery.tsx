@@ -36,22 +36,32 @@ export default function ProductGallery({
         )}
       </div>
 
-      <div className="mt-3 flex gap-2 overflow-x-auto">
-        {items.map((item, i) => (
-          <button
-            key={i}
-            onClick={() => setActive(i)}
-            aria-label={
-              item.type === "video" ? "Ver video del producto" : `Ver foto ${i + 1}`
-            }
-            className={`flex h-16 w-16 shrink-0 items-center justify-center border bg-surface font-mono text-[10px] text-text-muted transition ${
-              i === active ? "border-accent" : "border-border hover:border-text-muted"
-            }`}
-          >
-            {item.type === "video" ? "▶ video" : `[${i + 1}]`}
-          </button>
-        ))}
-      </div>
+      {items.length > 1 && (
+        <div className="mt-3 flex gap-2 overflow-x-auto">
+          {items.map((item, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={
+                item.type === "video"
+                  ? "Ver video del producto"
+                  : `Ver foto ${i + 1}`
+              }
+              className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden border bg-surface font-mono text-[10px] text-text-muted transition ${
+                i === active
+                  ? "border-accent"
+                  : "border-border hover:border-text-muted"
+              }`}
+            >
+              {item.type === "video" ? (
+                "▶ video"
+              ) : (
+                <ProductImage src={item.ref} alt={`${productName} — foto ${i + 1}`} />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

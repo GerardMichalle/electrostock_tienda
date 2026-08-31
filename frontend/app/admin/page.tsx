@@ -1,15 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useAdminProducts, useCategories } from "@/lib/admin-store";
+import { useProducts, useCategories, useAdminOrders } from "@/lib/admin-store";
 
 export default function AdminDashboard() {
-  const { products, ready } = useAdminProducts();
+  const { products, ready } = useProducts();
   const categories = useCategories();
+  const { orders, ready: ordersReady } = useAdminOrders();
 
   const enStock = products.filter((p) => p.stock === "En stock").length;
   const agotado = products.filter((p) => p.stock === "Agotado").length;
   const bajoPedido = products.filter((p) => p.stock === "Bajo pedido").length;
+  const pendientes = orders.filter(
+    (o) => o.status === "PENDIENTE_VERIFICACION",
+  ).length;
 
   return (
     <div>
@@ -52,6 +56,25 @@ export default function AdminDashboard() {
           </p>
         </div>
       </div>
+
+      <Link
+        href="/admin/pedidos"
+        className="mt-4 flex items-center justify-between border border-border bg-bg p-4 transition hover:border-accent"
+      >
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+            Pedidos por verificar
+          </p>
+          <p
+            className={`mt-1 font-display text-2xl font-bold ${
+              pendientes > 0 ? "text-accent" : "text-text-muted"
+            }`}
+          >
+            {ordersReady ? pendientes : "—"}
+          </p>
+        </div>
+        <span className="text-sm font-medium text-accent">Ver pedidos →</span>
+      </Link>
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <Link

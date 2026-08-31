@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
+import { apiFetch, ApiError, API_URL } from "@/lib/api";
 import {
-  products as seedProducts,
-  categories as seedCategories,
-  type Product,
-  type Category,
-} from "@/lib/data";
+  adaptCategory,
+  adaptProduct,
+  type ApiCategory,
+  type ApiProduct,
+} from "@/lib/adapters";
+import type { Category, Product } from "@/lib/data";
 
-const STORAGE_KEY = "electro_admin_products";
-const CATEGORIES_KEY = "electro_admin_categories";
-const AUTH_KEY = "electro_admin_auth";
+const TOKEN_KEY = "electro_admin_token";
+
+export type Result = { ok: boolean; error?: string };
+/** @deprecated usa `Result` */
+export type CategoryResult = Result;
 
 export function slugify(text: string) {
   return text
@@ -21,266 +25,245 @@ export function slugify(text: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-function readStorage(): Product[] {
-  if (typeof window === "undefined") return seedProducts;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return seedProducts;
-  try {
-    return JSON.parse(raw) as Product[];
-  } catch {
-    return seedProducts;
-  }
+function errMsg(e: unknown, fallback: string) {
+  return e instanceof ApiError ? e.message : fallback;
 }
 
-function writeStorage(products: Product[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+function readToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(TOKEN_KEY);
 }
 
-export function useAdminProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [ready, setReady] = useState(false);
+// ===========================================================================
+// Store de categorías (lectura pública + escritura admin)
+// ===========================================================================
 
-  useEffect(() => {
-    setProducts(readStorage());
-    setReady(true);
-  }, []);
+type CatState = { list: Category[]; loaded: boolean; error: string | null };
 
-  const persist = useCallback((next: Product[]) => {
-    setProducts(next);
-    writeStorage(next);
-  }, []);
+let catState: CatState = { list: [], loaded: false, error: null };
+const CAT_SERVER: CatState = { list: [], loaded: false, error: null };
+const catListeners = new Set<() => void>();
+let catLoading: Promise<void> | null = null;
 
-  const createProduct = useCallback(
-    (product: Product) => {
-      const current = readStorage();
-      persist([product, ...current]);
-    },
-    [persist]
-  );
-
-  const updateProduct = useCallback(
-    (slug: string, updates: Product) => {
-      const current = readStorage();
-      persist(current.map((p) => (p.slug === slug ? updates : p)));
-    },
-    [persist]
-  );
-
-  const deleteProduct = useCallback(
-    (slug: string) => {
-      const current = readStorage();
-      persist(current.filter((p) => p.slug !== slug));
-    },
-    [persist]
-  );
-
-  const resetToDemoData = useCallback(() => {
-    persist(seedProducts);
-  }, [persist]);
-
-  return {
-    products,
-    ready,
-    createProduct,
-    updateProduct,
-    deleteProduct,
-    resetToDemoData,
-  };
+function emitCat() {
+  catListeners.forEach((l) => l());
 }
 
-// ---------------------------------------------------------------------------
-// Categorías / subcategorías: mismo enfoque que productos, pero en un store a
-// nivel de módulo (useSyncExternalStore) para que un cambio hecho en el panel
-// se refleje al instante en la tienda pública (Header, home, listados) sin
-// depender de un remount. `lib/data.ts` queda solo como semilla inicial.
-// Cuando exista backend, esto pasa a leer/escribir de la API.
-type CategoryResult = { ok: boolean; error?: string };
-
-function readCategories(): Category[] {
-  if (typeof window === "undefined") return seedCategories;
-  const raw = window.localStorage.getItem(CATEGORIES_KEY);
-  if (!raw) return seedCategories;
-  try {
-    const parsed = JSON.parse(raw) as Category[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : seedCategories;
-  } catch {
-    return seedCategories;
-  }
-}
-
-let categoriesSnapshot: Category[] = readCategories();
-const categoriesListeners = new Set<() => void>();
-
-function writeCategories(next: Category[]) {
-  window.localStorage.setItem(CATEGORIES_KEY, JSON.stringify(next));
-  categoriesSnapshot = next;
-  categoriesListeners.forEach((listener) => listener());
-}
-
-function subscribeCategories(callback: () => void) {
-  categoriesListeners.add(callback);
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === CATEGORIES_KEY) {
-      categoriesSnapshot = readCategories();
-      callback();
+async function loadCategories(force = false): Promise<void> {
+  if (catLoading) return catLoading;
+  if (catState.loaded && !force) return;
+  catLoading = (async () => {
+    try {
+      const raw = await apiFetch<ApiCategory[]>("/api/categories");
+      catState = { list: raw.map(adaptCategory), loaded: true, error: null };
+    } catch (e) {
+      catState = {
+        list: catState.list,
+        loaded: true,
+        error: errMsg(e, "No se pudieron cargar las categorías."),
+      };
+    } finally {
+      catLoading = null;
+      emitCat();
     }
-  };
-  window.addEventListener("storage", onStorage);
+  })();
+  return catLoading;
+}
+
+function subscribeCategories(cb: () => void) {
+  catListeners.add(cb);
+  if (!catState.loaded) void loadCategories();
   return () => {
-    categoriesListeners.delete(callback);
-    window.removeEventListener("storage", onStorage);
+    catListeners.delete(cb);
   };
 }
 
-/** Lista de categorías reactiva. La usan tanto el panel como la tienda pública. */
-export function useCategories(): Category[] {
+function useCatState(): CatState {
   return useSyncExternalStore(
     subscribeCategories,
-    () => categoriesSnapshot,
-    () => seedCategories,
+    () => catState,
+    () => CAT_SERVER,
   );
 }
 
-/** CRUD + reordenamiento de categorías y subcategorías (solo panel admin). */
+/** Lista de categorías (tienda pública y panel). */
+export function useCategories(): Category[] {
+  return useCatState().list;
+}
+
+/** Igual que `useCategories` pero con `loading` y `error`. */
+export function useCategoriesState() {
+  const s = useCatState();
+  return { categories: s.list, loading: !s.loaded, error: s.error };
+}
+
+function findCat(slug: string) {
+  return catState.list.find((c) => c.slug === slug);
+}
+function findSub(catSlug: string, subSlug: string) {
+  return findCat(catSlug)?.subcategories.find((s) => s.slug === subSlug);
+}
+
+/** CRUD + reordenamiento de categorías/subcategorías (panel admin). */
 export function useAdminCategories() {
-  const categories = useCategories();
+  const state = useCatState();
 
-  const createCategory = useCallback((name: string): CategoryResult => {
-    const trimmed = name.trim();
-    if (!trimmed) return { ok: false, error: "Escribe un nombre." };
-    const slug = slugify(trimmed);
-    if (!slug) return { ok: false, error: "Ese nombre no genera un identificador válido." };
-    const current = readCategories();
-    if (current.some((c) => c.slug === slug))
-      return { ok: false, error: "Ya existe una categoría con un nombre parecido." };
-    writeCategories([
-      ...current,
-      { slug, name: trimmed, description: "", subcategories: [] },
-    ]);
-    return { ok: true };
-  }, []);
+  const reload = useCallback(() => loadCategories(true), []);
 
-  const renameCategory = useCallback((slug: string, name: string): CategoryResult => {
-    const trimmed = name.trim();
-    if (!trimmed) return { ok: false, error: "El nombre no puede quedar vacío." };
-    writeCategories(
-      readCategories().map((c) => (c.slug === slug ? { ...c, name: trimmed } : c)),
-    );
-    return { ok: true };
-  }, []);
-
-  const deleteCategory = useCallback(
-    (slug: string, productCount: number): CategoryResult => {
-      const current = readCategories();
-      if (current.length <= 1)
-        return { ok: false, error: "Debe existir al menos una categoría." };
-      if (productCount > 0)
-        return {
-          ok: false,
-          error: `No se puede borrar: tiene ${productCount} producto${
-            productCount === 1 ? "" : "s"
-          }. Muévelos o elimínalos primero.`,
-        };
-      writeCategories(current.filter((c) => c.slug !== slug));
+  const createCategory = useCallback(async (name: string): Promise<Result> => {
+    try {
+      await apiFetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+        token: readToken(),
+      });
+      await loadCategories(true);
       return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errMsg(e, "No se pudo crear la categoría.") };
+    }
+  }, []);
+
+  const renameCategory = useCallback(
+    async (slug: string, name: string): Promise<Result> => {
+      const cat = findCat(slug);
+      if (!cat?.id) return { ok: false, error: "Categoría no encontrada." };
+      try {
+        await apiFetch(`/api/categories/${cat.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+          token: readToken(),
+        });
+        await loadCategories(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo renombrar.") };
+      }
     },
     [],
   );
 
-  const moveCategory = useCallback((slug: string, dir: -1 | 1) => {
-    const current = [...readCategories()];
-    const i = current.findIndex((c) => c.slug === slug);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= current.length) return;
-    [current[i], current[j]] = [current[j], current[i]];
-    writeCategories(current);
+  const deleteCategory = useCallback(
+    async (slug: string): Promise<Result> => {
+      const cat = findCat(slug);
+      if (!cat?.id) return { ok: false, error: "Categoría no encontrada." };
+      try {
+        await apiFetch(`/api/categories/${cat.id}`, {
+          method: "DELETE",
+          token: readToken(),
+        });
+        await loadCategories(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo eliminar.") };
+      }
+    },
+    [],
+  );
+
+  const moveCategory = useCallback(async (slug: string, dir: -1 | 1) => {
+    const cat = findCat(slug);
+    if (!cat?.id) return;
+    try {
+      await apiFetch(`/api/categories/${cat.id}/move`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ direction: dir < 0 ? "up" : "down" }),
+        token: readToken(),
+      });
+      await loadCategories(true);
+    } catch {
+      /* no-op visual: la lista se queda como estaba */
+    }
   }, []);
 
   const createSubcategory = useCallback(
-    (catSlug: string, name: string): CategoryResult => {
-      const trimmed = name.trim();
-      if (!trimmed) return { ok: false, error: "Escribe un nombre." };
-      const slug = slugify(trimmed);
-      if (!slug) return { ok: false, error: "Ese nombre no genera un identificador válido." };
-      const current = readCategories();
-      const cat = current.find((c) => c.slug === catSlug);
-      if (!cat) return { ok: false, error: "Categoría no encontrada." };
-      if (cat.subcategories.some((s) => s.slug === slug))
-        return { ok: false, error: "Ya existe una subcategoría con un nombre parecido." };
-      writeCategories(
-        current.map((c) =>
-          c.slug === catSlug
-            ? { ...c, subcategories: [...c.subcategories, { slug, name: trimmed }] }
-            : c,
-        ),
-      );
-      return { ok: true };
+    async (catSlug: string, name: string): Promise<Result> => {
+      const cat = findCat(catSlug);
+      if (!cat?.id) return { ok: false, error: "Categoría no encontrada." };
+      try {
+        await apiFetch(`/api/categories/${cat.id}/subcategories`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+          token: readToken(),
+        });
+        await loadCategories(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo crear la subcategoría.") };
+      }
     },
     [],
   );
 
   const renameSubcategory = useCallback(
-    (catSlug: string, subSlug: string, name: string): CategoryResult => {
-      const trimmed = name.trim();
-      if (!trimmed) return { ok: false, error: "El nombre no puede quedar vacío." };
-      writeCategories(
-        readCategories().map((c) =>
-          c.slug === catSlug
-            ? {
-                ...c,
-                subcategories: c.subcategories.map((s) =>
-                  s.slug === subSlug ? { ...s, name: trimmed } : s,
-                ),
-              }
-            : c,
-        ),
-      );
-      return { ok: true };
+    async (catSlug: string, subSlug: string, name: string): Promise<Result> => {
+      const cat = findCat(catSlug);
+      const sub = findSub(catSlug, subSlug);
+      if (!cat?.id || !sub?.id) return { ok: false, error: "Subcategoría no encontrada." };
+      try {
+        await apiFetch(`/api/categories/${cat.id}/subcategories/${sub.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+          token: readToken(),
+        });
+        await loadCategories(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo renombrar.") };
+      }
     },
     [],
   );
 
   const deleteSubcategory = useCallback(
-    (catSlug: string, subSlug: string, productCount: number): CategoryResult => {
-      if (productCount > 0)
-        return {
-          ok: false,
-          error: `No se puede borrar: tiene ${productCount} producto${
-            productCount === 1 ? "" : "s"
-          }. Muévelos o elimínalos primero.`,
-        };
-      writeCategories(
-        readCategories().map((c) =>
-          c.slug === catSlug
-            ? { ...c, subcategories: c.subcategories.filter((s) => s.slug !== subSlug) }
-            : c,
-        ),
-      );
-      return { ok: true };
+    async (catSlug: string, subSlug: string): Promise<Result> => {
+      const cat = findCat(catSlug);
+      const sub = findSub(catSlug, subSlug);
+      if (!cat?.id || !sub?.id) return { ok: false, error: "Subcategoría no encontrada." };
+      try {
+        await apiFetch(`/api/categories/${cat.id}/subcategories/${sub.id}`, {
+          method: "DELETE",
+          token: readToken(),
+        });
+        await loadCategories(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo eliminar.") };
+      }
     },
     [],
   );
 
   const moveSubcategory = useCallback(
-    (catSlug: string, subSlug: string, dir: -1 | 1) => {
-      const current = readCategories().map((c) => {
-        if (c.slug !== catSlug) return c;
-        const subs = [...c.subcategories];
-        const i = subs.findIndex((s) => s.slug === subSlug);
-        const j = i + dir;
-        if (i < 0 || j < 0 || j >= subs.length) return c;
-        [subs[i], subs[j]] = [subs[j], subs[i]];
-        return { ...c, subcategories: subs };
-      });
-      writeCategories(current);
+    async (catSlug: string, subSlug: string, dir: -1 | 1) => {
+      const cat = findCat(catSlug);
+      const sub = findSub(catSlug, subSlug);
+      if (!cat?.id || !sub?.id) return;
+      try {
+        await apiFetch(`/api/categories/${cat.id}/subcategories/${sub.id}/move`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ direction: dir < 0 ? "up" : "down" }),
+          token: readToken(),
+        });
+        await loadCategories(true);
+      } catch {
+        /* no-op */
+      }
     },
     [],
   );
 
-  const resetCategories = useCallback(() => writeCategories(seedCategories), []);
-
   return {
-    categories,
+    categories: state.list,
+    loading: !state.loaded,
+    error: state.error,
+    reload,
     createCategory,
     renameCategory,
     deleteCategory,
@@ -289,62 +272,389 @@ export function useAdminCategories() {
     renameSubcategory,
     deleteSubcategory,
     moveSubcategory,
-    resetCategories,
   };
 }
 
-// Auth simplificada: solo para probar el flujo del panel mientras no hay
-// backend. Cuando exista, esto se reemplaza por un login real (Auth.js/JWT).
-//
-// El estado vive en un store a nivel de módulo (no en el estado local de cada
-// hook) para que al iniciar sesión el layout del panel lo vea al instante, sin
-// esperar a un remount ni volver a leer localStorage.
-const authListeners = new Set<() => void>();
+// ===========================================================================
+// Store de productos (lectura pública + escritura admin)
+// ===========================================================================
 
-let authSnapshot: boolean | null =
-  typeof window === "undefined"
-    ? null
-    : window.localStorage.getItem(AUTH_KEY) === "true";
+type ProdState = { list: Product[]; loaded: boolean; error: string | null };
 
-function setAuth(value: boolean) {
-  if (value) {
-    window.localStorage.setItem(AUTH_KEY, "true");
-  } else {
-    window.localStorage.removeItem(AUTH_KEY);
-  }
-  authSnapshot = value;
-  authListeners.forEach((listener) => listener());
-}
+let prodState: ProdState = { list: [], loaded: false, error: null };
+const PROD_SERVER: ProdState = { list: [], loaded: false, error: null };
+const prodListeners = new Set<() => void>();
+let prodLoading: Promise<void> | null = null;
 
-function subscribeAuth(callback: () => void) {
-  authListeners.add(callback);
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === AUTH_KEY) {
-      authSnapshot = window.localStorage.getItem(AUTH_KEY) === "true";
-      callback();
+async function loadProducts(force = false): Promise<void> {
+  if (prodLoading) return prodLoading;
+  if (prodState.loaded && !force) return;
+  prodLoading = (async () => {
+    try {
+      const raw = await apiFetch<{ items: ApiProduct[] }>(
+        "/api/products?pageSize=200",
+      );
+      prodState = {
+        list: raw.items.map(adaptProduct),
+        loaded: true,
+        error: null,
+      };
+    } catch (e) {
+      prodState = {
+        list: prodState.list,
+        loaded: true,
+        error: errMsg(e, "No se pudieron cargar los productos."),
+      };
+    } finally {
+      prodLoading = null;
+      prodListeners.forEach((l) => l());
     }
-  };
-  window.addEventListener("storage", onStorage);
+  })();
+  return prodLoading;
+}
+
+function subscribeProducts(cb: () => void) {
+  prodListeners.add(cb);
+  if (!prodState.loaded) void loadProducts();
   return () => {
-    authListeners.delete(callback);
-    window.removeEventListener("storage", onStorage);
+    prodListeners.delete(cb);
+  };
+}
+
+function useProdState(): ProdState {
+  return useSyncExternalStore(
+    subscribeProducts,
+    () => prodState,
+    () => PROD_SERVER,
+  );
+}
+
+/** Lista de productos para la tienda pública. */
+export function useProducts() {
+  const state = useProdState();
+  return {
+    products: state.list,
+    ready: state.loaded,
+    error: state.error,
+    reload: () => loadProducts(true),
+  };
+}
+
+/** Lista + CRUD de productos (panel admin). `FormData` porque hay fotos. */
+export function useAdminProducts() {
+  const state = useProdState();
+
+  const createProduct = useCallback(
+    async (formData: FormData): Promise<Result> => {
+      try {
+        await apiFetch("/api/products", {
+          method: "POST",
+          body: formData,
+          token: readToken(),
+        });
+        await loadProducts(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo crear el producto.") };
+      }
+    },
+    [],
+  );
+
+  const updateProduct = useCallback(
+    async (id: string, formData: FormData): Promise<Result> => {
+      try {
+        await apiFetch(`/api/products/${id}`, {
+          method: "PATCH",
+          body: formData,
+          token: readToken(),
+        });
+        await loadProducts(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo guardar el producto.") };
+      }
+    },
+    [],
+  );
+
+  const deleteProduct = useCallback(async (id: string): Promise<Result> => {
+    try {
+      await apiFetch(`/api/products/${id}`, {
+        method: "DELETE",
+        token: readToken(),
+      });
+      await loadProducts(true);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errMsg(e, "No se pudo eliminar el producto.") };
+    }
+  }, []);
+
+  const deleteProductImage = useCallback(
+    async (imageId: string): Promise<Result> => {
+      try {
+        await apiFetch(`/api/products/images/${imageId}`, {
+          method: "DELETE",
+          token: readToken(),
+        });
+        await loadProducts(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo quitar la foto.") };
+      }
+    },
+    [],
+  );
+
+  return {
+    products: state.list,
+    ready: state.loaded,
+    error: state.error,
+    reload: () => loadProducts(true),
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    deleteProductImage,
+  };
+}
+
+// ===========================================================================
+// Store de pedidos (solo panel admin)
+// ===========================================================================
+
+export type OrderStatus =
+  | "PENDIENTE_VERIFICACION"
+  | "PAGO_VERIFICADO"
+  | "RECHAZADO"
+  | "ENVIADO"
+  | "ENTREGADO";
+
+export type AdminOrderItem = {
+  id: string;
+  name: string;
+  price: string;
+  qty: number;
+};
+
+export type AdminOrder = {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  district: string | null;
+  paymentMethod: "YAPE" | "PLIN";
+  receiptUrl: string;
+  status: OrderStatus;
+  total: string;
+  items: AdminOrderItem[];
+  createdAt: string;
+};
+
+type OrdState = { list: AdminOrder[]; loaded: boolean; error: string | null };
+
+let ordState: OrdState = { list: [], loaded: false, error: null };
+const ORD_SERVER: OrdState = { list: [], loaded: false, error: null };
+const ordListeners = new Set<() => void>();
+let ordLoading: Promise<void> | null = null;
+
+async function loadOrders(force = false): Promise<void> {
+  if (ordLoading) return ordLoading;
+  if (ordState.loaded && !force) return;
+  ordLoading = (async () => {
+    try {
+      const raw = await apiFetch<AdminOrder[]>("/api/orders", {
+        token: readToken(),
+      });
+      ordState = { list: raw, loaded: true, error: null };
+    } catch (e) {
+      ordState = {
+        list: ordState.list,
+        loaded: true,
+        error: errMsg(e, "No se pudieron cargar los pedidos."),
+      };
+    } finally {
+      ordLoading = null;
+      ordListeners.forEach((l) => l());
+    }
+  })();
+  return ordLoading;
+}
+
+function subscribeOrders(cb: () => void) {
+  ordListeners.add(cb);
+  if (!ordState.loaded) void loadOrders();
+  return () => {
+    ordListeners.delete(cb);
+  };
+}
+
+function useOrdState(): OrdState {
+  return useSyncExternalStore(
+    subscribeOrders,
+    () => ordState,
+    () => ORD_SERVER,
+  );
+}
+
+/** Descarga la boleta PDF de un pedido (endpoint admin, respuesta binaria). */
+async function downloadOrderReceiptPdf(
+  id: string,
+  orderNumber: string,
+): Promise<Result> {
+  try {
+    // `apiFetch` parsea texto/JSON; para el PDF hace falta `fetch` directo.
+    const res = await fetch(`${API_URL}/api/orders/${id}/receipt-pdf`, {
+      headers: { Authorization: `Bearer ${readToken() ?? ""}` },
+    });
+    if (!res.ok) {
+      let msg = `Error ${res.status}`;
+      try {
+        const body = (await res.json()) as { error?: string };
+        if (body?.error) msg = body.error;
+      } catch {
+        /* respuesta no-JSON */
+      }
+      return { ok: false, error: msg };
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `boleta-${orderNumber}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "No se pudo descargar la boleta." };
+  }
+}
+
+/** Lista de pedidos + cambio de estado (panel admin). */
+export function useAdminOrders() {
+  const state = useOrdState();
+
+  const setStatus = useCallback(
+    async (id: string, status: OrderStatus): Promise<Result> => {
+      try {
+        await apiFetch(`/api/orders/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+          token: readToken(),
+        });
+        await loadOrders(true);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo actualizar el estado.") };
+      }
+    },
+    [],
+  );
+
+  return {
+    orders: state.list,
+    ready: state.loaded,
+    error: state.error,
+    reload: () => loadOrders(true),
+    setStatus,
+    // función estable a nivel de módulo, no necesita useCallback
+    downloadReceiptPdf: downloadOrderReceiptPdf,
+  };
+}
+
+// ===========================================================================
+// Auth admin (JWT real)
+// ===========================================================================
+
+export type AdminUser = { id: string; email: string; name: string; role: string };
+
+type AuthState = { token: string | null; user: AdminUser | null; checked: boolean };
+
+let authState: AuthState = {
+  token: readToken(),
+  user: null,
+  checked: false,
+};
+const AUTH_SERVER: AuthState = { token: null, user: null, checked: false };
+const authListeners = new Set<() => void>();
+let authInit = false;
+
+function emitAuth() {
+  authListeners.forEach((l) => l());
+}
+
+function clearSession() {
+  if (typeof window !== "undefined") window.localStorage.removeItem(TOKEN_KEY);
+  authState = { token: null, user: null, checked: true };
+  emitAuth();
+}
+
+function subscribeAuth(cb: () => void) {
+  authListeners.add(cb);
+  if (!authInit) {
+    authInit = true;
+    const token = authState.token;
+    if (!token) {
+      authState = { ...authState, checked: true };
+      emitAuth();
+    } else {
+      // Optimista: se considera autenticado ya; validamos en segundo plano.
+      authState = { ...authState, checked: true };
+      emitAuth();
+      apiFetch<AdminUser>("/api/auth/me", { token })
+        .then((user) => {
+          authState = { ...authState, user };
+          emitAuth();
+        })
+        .catch((e) => {
+          if (e instanceof ApiError && e.status === 401) clearSession();
+        });
+    }
+  }
+  return () => {
+    authListeners.delete(cb);
   };
 }
 
 export function useAdminAuth() {
-  const isAuthenticated = useSyncExternalStore(
+  const state = useSyncExternalStore(
     subscribeAuth,
-    () => authSnapshot,
-    () => null,
+    () => authState,
+    () => AUTH_SERVER,
   );
 
-  const login = useCallback((email: string, password: string) => {
-    const ok = email.trim().length > 0 && password.trim().length >= 4;
-    if (ok) setAuth(true);
-    return ok;
-  }, []);
+  const isAuthenticated: boolean | null = !state.checked
+    ? null
+    : Boolean(state.token);
 
-  const logout = useCallback(() => setAuth(false), []);
+  const login = useCallback(
+    async (email: string, password: string): Promise<Result> => {
+      try {
+        const { token, user } = await apiFetch<{ token: string; user: AdminUser }>(
+          "/api/auth/login",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          },
+        );
+        if (typeof window !== "undefined")
+          window.localStorage.setItem(TOKEN_KEY, token);
+        authState = { token, user, checked: true };
+        emitAuth();
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo iniciar sesión.") };
+      }
+    },
+    [],
+  );
 
-  return { isAuthenticated, login, logout };
+  const logout = useCallback(() => clearSession(), []);
+
+  return { isAuthenticated, user: state.user, token: state.token, login, logout };
 }

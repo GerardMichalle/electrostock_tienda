@@ -25,10 +25,7 @@ export default function Hero() {
 
       <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-24">
         <div className="max-w-2xl">
-          <p className="inline-block border border-white/60 px-2 py-1 font-mono text-xs uppercase tracking-[0.15em] text-white">
-            Stock actualizado
-          </p>
-          <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-white text-shadow-lg sm:text-5xl">
+          <h1 className="font-display text-4xl font-bold leading-tight text-white text-shadow-lg sm:text-5xl">
             Los componentes que tu proyecto necesita, listos para armar
           </h1>
           <p className="mt-4 max-w-md text-white text-shadow-sm">

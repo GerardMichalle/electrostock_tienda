@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { type Product } from "@/lib/data";
-import { slugify, useCategories } from "@/lib/admin-store";
+import { useCategories, type Result } from "@/lib/admin-store";
+import { STOCK_TO_API } from "@/lib/adapters";
 import ProductImage from "@/components/ProductImage";
 
 type FormMode = "create" | "edit";
@@ -13,11 +14,13 @@ export default function ProductForm({
   initialProduct,
   onSubmit,
   onDelete,
+  onDeleteImage,
 }: {
   mode: FormMode;
   initialProduct?: Product;
-  onSubmit: (product: Product) => void;
+  onSubmit: (formData: FormData) => Promise<Result>;
   onDelete?: () => void;
+  onDeleteImage?: (imageId: string) => Promise<Result>;
 }) {
   const router = useRouter();
   const categories = useCategories();
@@ -25,52 +28,55 @@ export default function ProductForm({
   const [name, setName] = useState(initialProduct?.name ?? "");
   const [sku, setSku] = useState(initialProduct?.sku ?? "");
   const [price, setPrice] = useState(initialProduct?.price?.toString() ?? "");
-  const [categorySlug, setCategorySlug] = useState(
-    initialProduct?.categorySlug ?? categories[0]?.slug ?? ""
+  const [categoryId, setCategoryId] = useState(
+    initialProduct?.categoryId ?? categories[0]?.id ?? "",
   );
-  const [subcategorySlug, setSubcategorySlug] = useState(
-    initialProduct?.subcategorySlug ??
-      categories[0]?.subcategories[0]?.slug ??
-      ""
+  const [subcategoryId, setSubcategoryId] = useState(
+    initialProduct?.subcategoryId ?? categories[0]?.subcategories[0]?.id ?? "",
   );
   const [stock, setStock] = useState<Product["stock"]>(
-    initialProduct?.stock ?? "En stock"
+    initialProduct?.stock ?? "En stock",
   );
   const [spec, setSpec] = useState(initialProduct?.spec ?? "");
-  const [description, setDescription] = useState(
-    initialProduct?.description ?? ""
-  );
-  const [gallery, setGallery] = useState<string[]>(initialProduct?.gallery ?? []);
+  const [description, setDescription] = useState(initialProduct?.description ?? "");
   const [videoUrl, setVideoUrl] = useState(initialProduct?.videoUrl ?? "");
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState(
+    initialProduct?.images ?? [],
+  );
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const activeCategory =
-    categories.find((c) => c.slug === categorySlug) ?? categories[0];
+    categories.find((c) => c.id === categoryId) ?? categories[0];
 
-  function handleCategoryChange(slug: string) {
-    setCategorySlug(slug);
-    const cat = categories.find((c) => c.slug === slug);
-    setSubcategorySlug(cat?.subcategories[0]?.slug ?? "");
+  function handleCategoryChange(id: string) {
+    setCategoryId(id);
+    const cat = categories.find((c) => c.id === id);
+    setSubcategoryId(cat?.subcategories[0]?.id ?? "");
   }
 
-  function handleFiles(files: FileList | null) {
+  function addFiles(files: FileList | null) {
     if (!files) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setGallery((prev) => [...prev, reader.result as string]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    setNewFiles((prev) => [...prev, ...Array.from(files)]);
   }
 
-  function removeImage(index: number) {
-    setGallery((prev) => prev.filter((_, i) => i !== index));
+  function removeNewFile(index: number) {
+    setNewFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function removeExistingImage(imageId: string) {
+    if (!onDeleteImage) return;
+    if (!confirm("¿Quitar esta foto? No se puede deshacer.")) return;
+    const res = await onDeleteImage(imageId);
+    if (res.ok) {
+      setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+    } else {
+      setError(res.error ?? "No se pudo quitar la foto.");
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -83,33 +89,41 @@ export default function ProductForm({
       setError("El precio debe ser un número válido.");
       return;
     }
-    if (gallery.length === 0) {
-      setError("Sube al menos una foto del producto.");
-      return;
-    }
-    if (!subcategorySlug) {
+    if (!subcategoryId) {
       setError(
         "Esta categoría no tiene subcategorías. Crea una en la sección Categorías antes de publicar aquí.",
       );
       return;
     }
+    const totalPhotos = existingImages.length + newFiles.length;
+    if (mode === "create" && newFiles.length === 0) {
+      setError("Sube al menos una foto del producto.");
+      return;
+    }
+    if (mode === "edit" && totalPhotos === 0) {
+      setError("El producto debe tener al menos una foto.");
+      return;
+    }
 
-    const slug = initialProduct?.slug ?? slugify(`${name}-${sku}`);
+    const fd = new FormData();
+    fd.append("name", name.trim());
+    fd.append("sku", sku.trim());
+    fd.append("price", price);
+    fd.append("categoryId", categoryId);
+    fd.append("subcategoryId", subcategoryId);
+    fd.append("stock", STOCK_TO_API[stock]);
+    fd.append("spec", spec.trim());
+    fd.append("description", description.trim());
+    if (videoUrl.trim()) fd.append("videoUrl", videoUrl.trim());
+    newFiles.forEach((file) => fd.append("images", file));
 
-    onSubmit({
-      slug,
-      name: name.trim(),
-      sku: sku.trim(),
-      price: priceNum,
-      categorySlug,
-      subcategorySlug,
-      stock,
-      spec: spec.trim(),
-      description: description.trim(),
-      image: gallery[0],
-      gallery,
-      videoUrl: videoUrl.trim() || undefined,
-    });
+    setSubmitting(true);
+    const res = await onSubmit(fd);
+    if (!res.ok) {
+      setError(res.error ?? "No se pudo guardar.");
+      setSubmitting(false);
+    }
+    // en éxito, la página padre navega a /admin/productos
   }
 
   return (
@@ -159,12 +173,12 @@ export default function ProductForm({
             Categoría
           </label>
           <select
-            value={categorySlug}
+            value={categoryId}
             onChange={(e) => handleCategoryChange(e.target.value)}
             className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
           >
             {categories.map((c) => (
-              <option key={c.slug} value={c.slug}>
+              <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
@@ -176,14 +190,14 @@ export default function ProductForm({
             Subcategoría
           </label>
           <select
-            value={subcategorySlug}
-            onChange={(e) => setSubcategorySlug(e.target.value)}
+            value={subcategoryId}
+            onChange={(e) => setSubcategoryId(e.target.value)}
             disabled={!activeCategory?.subcategories.length}
             className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent disabled:cursor-not-allowed disabled:text-text-muted"
           >
             {activeCategory?.subcategories.length ? (
               activeCategory.subcategories.map((s) => (
-                <option key={s.slug} value={s.slug}>
+                <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
               ))
@@ -245,16 +259,37 @@ export default function ProductForm({
             Fotos del producto
           </label>
           <div className="flex flex-wrap gap-3">
-            {gallery.map((img, i) => (
+            {existingImages.map((img) => (
               <div
-                key={i}
+                key={img.id}
                 className="relative h-20 w-20 overflow-hidden border border-border bg-surface"
               >
-                <ProductImage src={img} alt={`Foto ${i + 1}`} />
+                <ProductImage src={img.url} alt="Foto del producto" />
                 <button
                   type="button"
-                  onClick={() => removeImage(i)}
-                  aria-label={`Quitar foto ${i + 1}`}
+                  onClick={() => removeExistingImage(img.id)}
+                  aria-label="Quitar foto"
+                  className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center bg-bg/90 text-xs text-red-600"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {newFiles.map((file, i) => (
+              <div
+                key={`new-${i}`}
+                className="relative h-20 w-20 overflow-hidden border border-accent bg-surface"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt={`Nueva foto ${i + 1}`}
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeNewFile(i)}
+                  aria-label={`Quitar nueva foto ${i + 1}`}
                   className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center bg-bg/90 text-xs text-red-600"
                 >
                   ×
@@ -268,12 +303,16 @@ export default function ProductForm({
                 accept="image/*"
                 multiple
                 className="hidden"
-                onChange={(e) => handleFiles(e.target.files)}
+                onChange={(e) => {
+                  addFiles(e.target.files);
+                  e.target.value = "";
+                }}
               />
             </label>
           </div>
           <p className="mt-1 font-mono text-[11px] text-text-muted">
-            La primera foto se usa como imagen principal.
+            La primera foto se usa como imagen principal. Máximo 8 fotos, 8&nbsp;MB
+            cada una.
           </p>
         </div>
 
@@ -299,9 +338,14 @@ export default function ProductForm({
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          className="border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-dark"
+          disabled={submitting}
+          className="border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-dark disabled:opacity-60"
         >
-          {mode === "create" ? "Publicar producto" : "Guardar cambios"}
+          {submitting
+            ? "Guardando…"
+            : mode === "create"
+              ? "Publicar producto"
+              : "Guardar cambios"}
         </button>
         <button
           type="button"

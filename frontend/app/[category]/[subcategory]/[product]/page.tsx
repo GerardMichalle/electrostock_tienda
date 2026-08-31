@@ -2,13 +2,17 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import CategoryBreadcrumb from "@/components/CategoryBreadcrumb";
+import Breadcrumb from "@/components/Breadcrumb";
 import ProductGallery from "@/components/ProductGallery";
 import AddToCartBar from "@/components/AddToCartBar";
 import ProductCard from "@/components/ProductCard";
 import yapeBadge from "@/src/img/yape-badge.png";
 import plinBadge from "@/src/img/plin-badge.png";
-import { products, getProduct, getRelatedProducts } from "@/lib/data";
+import { ApiError, apiFetch } from "@/lib/api";
+import { adaptProduct, type ApiProduct } from "@/lib/adapters";
+import type { Product } from "@/lib/data";
+
+export const revalidate = 60;
 
 const stockStyles: Record<string, string> = {
   "En stock": "bg-accent-cyan/10 text-sky-700",
@@ -16,12 +20,32 @@ const stockStyles: Record<string, string> = {
   "Bajo pedido": "bg-amber-50 text-amber-700",
 };
 
-export function generateStaticParams() {
-  return products.map((p) => ({
-    category: p.categorySlug,
-    subcategory: p.subcategorySlug,
-    product: p.slug,
-  }));
+async function getProduct(slug: string): Promise<Product | null> {
+  try {
+    const raw = await apiFetch<ApiProduct>(`/api/products/${encodeURIComponent(slug)}`);
+    return adaptProduct(raw);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+async function getRelated(product: Product): Promise<Product[]> {
+  try {
+    const { items } = await apiFetch<{ items: ApiProduct[] }>(
+      `/api/products?category=${encodeURIComponent(product.categorySlug)}&pageSize=12`,
+    );
+    return items
+      .map(adaptProduct)
+      .filter(
+        (p) =>
+          p.slug !== product.slug &&
+          p.subcategorySlug === product.subcategorySlug,
+      )
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
 }
 
 export default async function ProductPage({
@@ -31,18 +55,26 @@ export default async function ProductPage({
 }) {
   const { product: productSlug } = await params;
 
-  const product = getProduct(productSlug);
+  const product = await getProduct(productSlug);
   if (!product) notFound();
 
-  const related = getRelatedProducts(product);
+  const related = await getRelated(product);
 
   return (
     <>
       <Header />
-      <CategoryBreadcrumb
-        categorySlug={product.categorySlug}
-        subcategorySlug={product.subcategorySlug}
-        current={product.name}
+      <Breadcrumb
+        items={[
+          {
+            label: product.categoryName ?? product.categorySlug,
+            href: `/${product.categorySlug}`,
+          },
+          {
+            label: product.subcategoryName ?? product.subcategorySlug,
+            href: `/${product.categorySlug}/${product.subcategorySlug}`,
+          },
+          { label: product.name },
+        ]}
       />
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">

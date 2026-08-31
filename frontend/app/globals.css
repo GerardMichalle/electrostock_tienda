@@ -104,3 +104,62 @@ select,
   border-bottom: 2px solid;
   border-right: 2px solid;
 }
+
+/* Botón del carrito: rebote + destello cuando aterriza un producto (efecto
+   "volar al carrito", ver lib/fly-to-cart.tsx). */
+@keyframes cart-bump {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.55);
+  }
+  35% {
+    transform: scale(1.14);
+    box-shadow: 0 0 0 7px rgba(14, 165, 233, 0);
+  }
+  60% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+  }
+}
+.cart-bump {
+  animation: cart-bump 0.48s cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+
+@keyframes cart-count {
+  0% {
+    transform: translateY(-0.5em) scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+.cart-count {
+  animation: cart-count 0.32s cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-bump,
+  .cart-count {
+    animation: none;
+  }
+}
+
+/* Barra de anuncios: un texto que cruza la pantalla (ver AnnouncementBar.tsx).
+   Recorre 100% del ancho del contenedor (pl-[100%]) + su propio ancho. */
+@keyframes announce-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+.announce-track {
+  animation: announce-marquee 26s linear infinite;
+  will-change: transform;
+}

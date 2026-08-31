@@ -12,7 +12,7 @@ const stockStyles: Record<string, string> = {
 };
 
 export default function AdminProductsPage() {
-  const { products, ready, deleteProduct } = useAdminProducts();
+  const { products, ready, error, deleteProduct } = useAdminProducts();
   const [query, setQuery] = useState("");
 
   const filtered = products.filter(
@@ -21,10 +21,11 @@ export default function AdminProductsPage() {
       p.sku.toLowerCase().includes(query.toLowerCase())
   );
 
-  function handleDelete(slug: string, name: string) {
-    if (confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) {
-      deleteProduct(slug);
-    }
+  async function handleDelete(id: string | undefined, name: string) {
+    if (!id) return;
+    if (!confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) return;
+    const res = await deleteProduct(id);
+    if (!res.ok) alert(res.error);
   }
 
   return (
@@ -43,6 +44,12 @@ export default function AdminProductsPage() {
           + Nuevo producto
         </Link>
       </div>
+
+      {error && (
+        <p className="mt-4 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {error}
+        </p>
+      )}
 
       <input
         value={query}
@@ -79,7 +86,7 @@ export default function AdminProductsPage() {
               </tr>
             )}
             {filtered.map((p) => (
-              <tr key={p.slug} className="border-b border-border last:border-0">
+              <tr key={p.id ?? p.slug} className="border-b border-border last:border-0">
                 <td className="px-4 py-3">
                   <div className="h-12 w-12 overflow-hidden border border-border bg-surface">
                     <ProductImage src={p.image} alt={p.name} />
@@ -108,7 +115,7 @@ export default function AdminProductsPage() {
                       Editar
                     </Link>
                     <button
-                      onClick={() => handleDelete(p.slug, p.name)}
+                      onClick={() => handleDelete(p.id, p.name)}
                       className="text-xs font-medium text-red-600 hover:underline"
                     >
                       Eliminar

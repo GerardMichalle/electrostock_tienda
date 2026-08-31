@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  ClipboardList,
   LayoutGrid,
   LogOut,
   Package,
@@ -18,6 +19,7 @@ const navItems: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/admin", label: "Resumen", Icon: LayoutGrid },
   { href: "/admin/productos", label: "Productos", Icon: Package },
   { href: "/admin/categorias", label: "Categorías", Icon: Tags },
+  { href: "/admin/pedidos", label: "Pedidos", Icon: ClipboardList },
 ];
 
 function isActive(pathname: string, href: string) {

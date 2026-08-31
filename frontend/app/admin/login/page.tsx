@@ -12,12 +12,16 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const ok = login(email, password);
-    if (!ok) {
-      setError("Ingresa un correo válido y una contraseña de al menos 4 caracteres.");
+    setError("");
+    setSubmitting(true);
+    const res = await login(email, password);
+    setSubmitting(false);
+    if (!res.ok) {
+      setError(res.error ?? "No se pudo iniciar sesión.");
       return;
     }
     router.push("/admin");
@@ -44,7 +48,11 @@ export default function AdminLoginPage() {
           Ingresa con tu cuenta para gestionar el catálogo de ElectroStock Perú.
         </p>
 
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={(e) => void handleSubmit(e)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div>
             <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
               Correo
@@ -81,16 +89,12 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            className="mt-2 border border-accent bg-accent py-2.5 text-sm font-medium text-white transition hover:bg-accent-dark"
+            disabled={submitting}
+            className="mt-2 border border-accent bg-accent py-2.5 text-sm font-medium text-white transition hover:bg-accent-dark disabled:opacity-60"
           >
-            Iniciar sesión
+            {submitting ? "Entrando…" : "Iniciar sesión"}
           </button>
         </form>
-
-        <p className="mt-6 border-t border-dashed border-border pt-4 font-mono text-[11px] text-text-muted">
-          Nota: login temporal sin backend. Entra con cualquier correo y una
-          contraseña de 4 o más caracteres; la sesión se guarda en tu navegador.
-        </p>
       </div>
     </div>
   );

@@ -3,30 +3,40 @@
 import { useRouter, useParams } from "next/navigation";
 import { useAdminProducts } from "@/lib/admin-store";
 import ProductForm from "@/components/admin/ProductForm";
-import type { Product } from "@/lib/data";
 
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
-  const { products, ready, updateProduct, deleteProduct } = useAdminProducts();
+  const { products, ready, error, updateProduct, deleteProduct, deleteProductImage } =
+    useAdminProducts();
 
   const product = products.find((p) => p.slug === params.slug);
 
-  function handleSubmit(updated: Product) {
-    updateProduct(params.slug, updated);
-    router.push("/admin/productos");
+  async function handleSubmit(formData: FormData) {
+    if (!product?.id) return { ok: false, error: "Producto no encontrado." };
+    const res = await updateProduct(product.id, formData);
+    if (res.ok) router.push("/admin/productos");
+    return res;
   }
 
-  function handleDelete() {
-    if (!product) return;
-    if (confirm(`¿Eliminar "${product.name}"? Esta acción no se puede deshacer.`)) {
-      deleteProduct(product.slug);
+  async function handleDelete() {
+    if (!product?.id) return;
+    if (!confirm(`¿Eliminar "${product.name}"? Esta acción no se puede deshacer.`))
+      return;
+    const res = await deleteProduct(product.id);
+    if (res.ok) {
       router.push("/admin/productos");
+    } else {
+      alert(res.error);
     }
   }
 
   if (!ready) {
     return <p className="text-sm text-text-muted">Cargando…</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-red-600">{error}</p>;
   }
 
   if (!product) {
@@ -51,6 +61,7 @@ export default function EditProductPage() {
           initialProduct={product}
           onSubmit={handleSubmit}
           onDelete={handleDelete}
+          onDeleteImage={deleteProductImage}
         />
       </div>
     </div>
