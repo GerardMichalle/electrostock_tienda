@@ -1,3 +1,4 @@
+import path from "path";
 import PDFDocument from "pdfkit";
 import type { Order, OrderItem } from "@prisma/client";
 
@@ -11,6 +12,13 @@ const PAYMENT_LABEL: Record<string, string> = {
 const INK = "#0f172a";
 const MUTED = "#64748b";
 const RULE = "#cbd5e1";
+const ACCENT = "#1554b3";
+
+// Logo de marca embebido en la boleta. `assets/` vive junto a `src/`/`dist/`
+// (mismo nivel que backend/uploads), así que esta ruta funciona igual en
+// dev (ts-node-dev, corre desde src/utils) y en prod (node dist/utils).
+const LOGO_PATH = path.join(__dirname, "..", "..", "assets", "brand", "logo-full.png");
+const LOGO_ASPECT = 579 / 1170; // alto / ancho del PNG original
 
 function formatDate(date: Date): string {
   // Zona horaria fija de Perú para que la boleta coincida con lo que ve el
@@ -70,24 +78,51 @@ export function buildOrderPdf(order: OrderWithItems): PDFKit.PDFDocument {
     doc.font("Helvetica").fillColor(INK).text(value || "—");
   };
 
-  // ---- Encabezado ---------------------------------------------------------
-  doc.font("Helvetica-Bold").fontSize(20).fillColor(INK).text("AMYTRONICS");
+  // ---- Encabezado: logo a la izquierda, datos del pedido a la derecha ----
+  const headerTop = doc.y;
+  const logoW = 132;
+  const logoH = logoW * LOGO_ASPECT;
+  try {
+    doc.image(LOGO_PATH, left, headerTop, { width: logoW });
+  } catch {
+    // Si el asset no está disponible (p.ej. despliegue sin el archivo),
+    // no rompemos la boleta: caemos al wordmark de texto.
+    doc.font("Helvetica-Bold").fontSize(20).fillColor(INK).text("AMYTRONICS", left, headerTop);
+  }
+
+  const infoX = left + logoW + 22;
+  const infoW = right - infoX;
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8.5)
+    .fillColor(MUTED)
+    .text("BOLETA DE PEDIDO", infoX, headerTop + 4, {
+      width: infoW,
+      align: "right",
+      characterSpacing: 0.6,
+    });
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(17)
+    .fillColor(INK)
+    .text(order.orderNumber, infoX, headerTop + 17, { width: infoW, align: "right" });
   doc
     .font("Helvetica")
-    .fontSize(10)
+    .fontSize(9)
     .fillColor(MUTED)
-    .text("Boleta de pedido · documento para despacho");
+    .text(formatDate(order.createdAt), infoX, headerTop + 39, {
+      width: infoW,
+      align: "right",
+    });
 
-  doc.moveDown(0.9);
-  doc.font("Helvetica-Bold").fontSize(13).fillColor(INK).text(`Pedido ${order.orderNumber}`);
+  doc.y = headerTop + Math.max(logoH, 52) + 12;
   doc
-    .font("Helvetica")
-    .fontSize(10)
-    .fillColor(MUTED)
-    .text(`Fecha: ${formatDate(order.createdAt)}`);
-
-  doc.moveDown(0.5);
-  rule(doc.y);
+    .moveTo(left, doc.y)
+    .lineTo(right, doc.y)
+    .lineWidth(1.75)
+    .strokeColor(ACCENT)
+    .stroke();
+  doc.moveDown(0.7);
 
   // ---- Datos de entrega --------------------------------------------------
   sectionTitle("Datos de entrega");
