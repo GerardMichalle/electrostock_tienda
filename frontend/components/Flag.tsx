@@ -1,11 +1,7 @@
-/**
- * Banderas SVG en línea (sin dependencias ni imágenes externas) para el
- * selector de país del checkout. Versiones simplificadas pero reconocibles;
- * viewBox uniforme 4×3.
- */
+
 import type { ReactNode } from "react";
 
-// -- helpers ---------------------------------------------------------------
+
 
 const hstripes = (colors: string[]): ReactNode =>
   colors.map((c, i) => (
@@ -17,7 +13,6 @@ const vstripes = (colors: string[]): ReactNode =>
     <rect key={i} x={(i * 4) / colors.length} y={0} width={4 / colors.length} height={3} fill={c} />
   ));
 
-// bandas horizontales con peso (para España/Colombia/Ecuador)
 const weighted = (bands: [string, number][]): ReactNode => {
   const total = bands.reduce((s, [, w]) => s + w, 0);
   let y = 0;
@@ -29,7 +24,7 @@ const weighted = (bands: [string, number][]): ReactNode => {
   });
 };
 
-// -- banderas ------------------------------------------------------------
+
 
 const FLAGS: Record<string, ReactNode> = {
   pe: (

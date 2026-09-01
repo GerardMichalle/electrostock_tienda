@@ -26,13 +26,13 @@ export default function HeroParticles() {
     let raf = 0;
 
     const pointer = { x: 0, y: 0, inside: false };
-    let influence = 0; // eased 0..1 — how "awake" the field is
+    let influence = 0; 
 
     const spawn = (): Particle => ({
       x: Math.random() * width,
       y: Math.random() * height,
       vx: (Math.random() - 0.5) * 0.22,
-      vy: (Math.random() - 0.5) * 0.22 - 0.04, // slight upward drift, like bubbles
+      vy: (Math.random() - 0.5) * 0.22 - 0.04, 
       r: Math.random() * 1.8 + 1.2,
     });
 
@@ -78,7 +78,7 @@ export default function HeroParticles() {
 
       for (const p of particles) {
         if (awake) {
-          // cursor gently pushes particles aside, like a same-charge field
+       
           const dx = p.x - pointer.x;
           const dy = p.y - pointer.y;
           const d2 = dx * dx + dy * dy;
@@ -90,7 +90,7 @@ export default function HeroParticles() {
           }
         }
 
-        // idle wander so it keeps drifting slowly on its own
+   
         p.vx += (Math.random() - 0.5) * 0.014;
         p.vy += (Math.random() - 0.5) * 0.014;
         p.vx *= 0.98;
@@ -113,7 +113,7 @@ export default function HeroParticles() {
         else if (p.y > height + m) p.y = -m;
       }
 
-      // links between nearby particles
+      
       ctx.lineWidth = 1;
       for (let i = 0; i < particles.length; i++) {
         const a = particles[i];
@@ -131,7 +131,7 @@ export default function HeroParticles() {
         }
       }
 
-      // links to the pointer + node glow
+   
       for (const p of particles) {
         let glow = 0;
         if (awake) {

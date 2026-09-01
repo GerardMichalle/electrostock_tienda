@@ -9,12 +9,6 @@ import QuickViewModal from "@/components/QuickViewModal";
 import { useCart } from "@/lib/cart-context";
 import { useFlyToCart } from "@/lib/fly-to-cart";
 
-const stockStyles: Record<Product["stock"], string> = {
-  "En stock": "bg-accent-cyan/10 text-sky-700",
-  Agotado: "bg-surface text-text-muted",
-  "Bajo pedido": "bg-amber-50 text-amber-700",
-};
-
 export default function ProductCard({ product }: { product: Product }) {
   const href = `/${product.categorySlug}/${product.subcategorySlug}/${product.slug}`;
   const { addItem } = useCart();
@@ -84,14 +78,9 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.spec}
         </p>
 
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-dashed border-border pt-2">
+        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-border pt-2">
           <span className="select-text font-display text-[15px] font-bold text-accent sm:text-base">
             S/ {product.price.toFixed(2)}
-          </span>
-          <span
-            className={`px-2 py-0.5 text-[10px] font-medium sm:text-[11px] ${stockStyles[product.stock]}`}
-          >
-            {product.stock}
           </span>
         </div>
       </Link>

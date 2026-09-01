@@ -9,12 +9,6 @@ import ProductGallery from "@/components/ProductGallery";
 import { useCart } from "@/lib/cart-context";
 import { useFlyToCart } from "@/lib/fly-to-cart";
 
-const stockStyles: Record<Product["stock"], string> = {
-  "En stock": "bg-accent-cyan/10 text-sky-700",
-  Agotado: "bg-surface text-text-muted",
-  "Bajo pedido": "bg-amber-50 text-amber-700",
-};
-
 export default function QuickViewModal({
   product,
   onClose,
@@ -109,11 +103,6 @@ export default function QuickViewModal({
             <div className="mt-3 flex items-center gap-3">
               <span className="select-text font-display text-2xl font-bold text-accent">
                 S/ {product.price.toFixed(2)}
-              </span>
-              <span
-                className={`px-2 py-0.5 text-[11px] font-medium ${stockStyles[product.stock]}`}
-              >
-                {product.stock}
               </span>
             </div>
 

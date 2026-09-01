@@ -5,7 +5,7 @@ import heroImg from "@/src/img/hero_img.jpg";
 export default function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-border">
-      {/* Foto real de fondo */}
+      {}
       <Image
         src={heroImg}
         alt=""
@@ -15,12 +15,12 @@ export default function Hero() {
         placeholder="blur"
         className="object-cover object-center"
       />
-      {/* Scrim oscuro: fuerte sobre el texto (izq.), suave sobre la tarjeta (der.) */}
+      {}
       <div
         aria-hidden
         className="absolute inset-0 bg-linear-to-r from-black/75 via-black/60 to-black/45"
       />
-      {/* Campo de partículas tipo circuito: deriva solo y reacciona al cursor */}
+      {}
       <HeroParticles />
 
       <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-24">

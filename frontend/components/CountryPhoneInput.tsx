@@ -9,11 +9,7 @@ import {
   sanitizeNational,
 } from "@/lib/countries";
 
-/**
- * Campo de celular con selector de país (bandera + código). El número se limita
- * a la cantidad de dígitos del país elegido. El componente es controlado:
- * el padre guarda `country` (iso) y `national` (solo dígitos).
- */
+
 export default function CountryPhoneInput({
   country,
   national,
@@ -41,7 +37,7 @@ export default function CountryPhoneInput({
     setOpen(false);
   }
 
-  // cerrar al hacer clic fuera / con Escape
+
   useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {

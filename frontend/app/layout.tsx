@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart-context";
 import { FlyToCartProvider } from "@/lib/fly-to-cart";
+import CustomCursor from "@/components/CustomCursor";
 
 // NOTA: en este entorno de sandbox no hay salida a fonts.googleapis.com,
 // por eso usamos una pila de fuentes de sistema como fallback temporal.
@@ -42,8 +43,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-bg text-text">
+        <CustomCursor />
         <CartProvider>
-          <FlyToCartProvider>{children}</FlyToCartProvider>
+          <FlyToCartProvider>
+            <div className="app-zoom flex flex-1 flex-col">{children}</div>
+          </FlyToCartProvider>
         </CartProvider>
       </body>
     </html>

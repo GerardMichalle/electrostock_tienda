@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
 import CategoryGrid from "@/components/CategoryGrid";
 import NovedadesGrid from "@/components/NovedadesGrid";
+import Impresiones3D from "@/components/Impresiones3D";
 import SoftwareCarousel from "@/components/SoftwareCarousel";
 
 export default function Home() {
@@ -25,10 +26,16 @@ export default function Home() {
           </div>
         </section>
 
+        <section id="impresiones-3d" className="border-t border-border">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+            <Impresiones3D />
+          </div>
+        </section>
+
         <section id="software" className="border-t border-border">
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
             <h2 className="font-display text-2xl font-semibold">
-              Software 
+              Software
             </h2>
             <p className="mt-2 max-w-xl text-sm text-text-muted">
               Los programas que todo ingeniero electrónico usa para diseñar,
