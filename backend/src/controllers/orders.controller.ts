@@ -21,10 +21,13 @@ const orderItemSchema = z.object({
 });
 
 const orderInputSchema = z.object({
-  customerName: z.string().min(1, "El nombre es obligatorio."),
-  customerPhone: z.string().min(6, "Ingresa un celular válido."),
-  address: z.string().min(1, "La dirección es obligatoria."),
-  district: z.string().optional(),
+  customerName: z.string().min(1, "El nombre es obligatorio.").max(120),
+  customerPhone: z
+    .string()
+    .min(6, "Ingresa un celular válido.")
+    .max(20, "Ingresa un celular válido."),
+  address: z.string().min(1, "La dirección es obligatoria.").max(200),
+  district: z.string().max(120).optional(),
   paymentMethod: z.enum(["YAPE", "PLIN"]),
   items: z.string().min(1), // JSON string (multipart no soporta arrays anidados directo)
 });

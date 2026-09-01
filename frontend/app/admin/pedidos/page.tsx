@@ -50,14 +50,16 @@ function money(value: string | number) {
 }
 
 /**
- * Normaliza el celular del pedido a formato internacional de Perú para el
- * link de WhatsApp. `customerPhone` se guarda tal cual lo escribe el
- * cliente (ej. "987 654 321", sin código de país). Devuelve `null` si no
- * parece un número válido.
+ * Normaliza el celular del pedido a formato internacional para el link de
+ * WhatsApp. Los pedidos nuevos guardan el número con código de país
+ * (ej. "+51987654321"); los antiguos venían sin código, asumimos Perú.
+ * Devuelve `null` si no parece un número válido.
  */
 function normalizePhone(raw: string): string | null {
+  const hasCountryCode = raw.trim().startsWith("+");
   const digits = raw.replace(/\D/g, "");
-  if (digits.length < 9) return null;
+  if (digits.length < 8) return null;
+  if (hasCountryCode) return digits; // ya viene en formato internacional
   if (digits.length === 9) return `51${digits}`;
   return digits.startsWith("51") ? digits : `51${digits}`;
 }

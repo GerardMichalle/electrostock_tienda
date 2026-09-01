@@ -3,10 +3,18 @@
 import { useState } from "react";
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CountryPhoneInput from "@/components/CountryPhoneInput";
 import { useCart } from "@/lib/cart-context";
 import { apiFetch, ApiError } from "@/lib/api";
+import {
+  DEFAULT_COUNTRY,
+  type Country,
+  composePhone,
+  isValidNational,
+} from "@/lib/countries";
 import yapeBadge from "@/src/img/yape-badge.png";
 import plinBadge from "@/src/img/plin-badge.png";
 import yapeQr from "@/src/img/yape-qr.png";
@@ -45,9 +53,14 @@ export default function CheckoutPage() {
   const { items, ready, totalPrice, clearCart } = useCart();
   const [method, setMethod] = useState<PaymentMethod>("yape");
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [phoneNational, setPhoneNational] = useState("");
   const [address, setAddress] = useState("");
   const [district, setDistrict] = useState("");
+  const [triedSubmit, setTriedSubmit] = useState(false);
+
+  const ADDRESS_MAX = 160;
+  const phoneOk = isValidNational(phoneNational, phoneCountry);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState("");
   const [error, setError] = useState("");
@@ -70,9 +83,14 @@ export default function CheckoutPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setTriedSubmit(true);
 
-    if (!name.trim() || !phone.trim() || !address.trim()) {
-      setError("Completa tus datos de contacto y dirección de entrega.");
+    if (!name.trim() || address.trim().length < 6) {
+      setError("Completa tu nombre y una dirección de entrega válida.");
+      return;
+    }
+    if (!phoneOk) {
+      setError(`Revisa tu número de celular de ${phoneCountry.name}.`);
       return;
     }
     if (!receiptFile) {
@@ -82,7 +100,7 @@ export default function CheckoutPage() {
 
     const fd = new FormData();
     fd.append("customerName", name.trim());
-    fd.append("customerPhone", phone.trim());
+    fd.append("customerPhone", composePhone(phoneNational, phoneCountry));
     fd.append("address", address.trim());
     if (district.trim()) fd.append("district", district.trim());
     fd.append("paymentMethod", method === "yape" ? "YAPE" : "PLIN");
@@ -191,6 +209,7 @@ export default function CheckoutPage() {
                     <input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      maxLength={70}
                       className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
                       placeholder="Juan Pérez"
                     />
@@ -199,11 +218,12 @@ export default function CheckoutPage() {
                     <label className="mb-1 block text-xs text-text-muted">
                       Celular (WhatsApp)
                     </label>
-                    <input
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
-                      placeholder="999 999 999"
+                    <CountryPhoneInput
+                      country={phoneCountry}
+                      national={phoneNational}
+                      onCountryChange={setPhoneCountry}
+                      onNationalChange={setPhoneNational}
+                      invalid={triedSubmit && !phoneOk}
                     />
                   </div>
                   <div>
@@ -213,19 +233,36 @@ export default function CheckoutPage() {
                     <input
                       value={district}
                       onChange={(e) => setDistrict(e.target.value)}
+                      maxLength={80}
                       className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
                       placeholder="La libertad, Trujillo"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-xs text-text-muted">
-                      Dirección
-                    </label>
+                    <div className="mb-1 flex items-baseline justify-between">
+                      <label className="block text-xs text-text-muted">
+                        Dirección
+                      </label>
+                      <span
+                        className={`font-mono text-[11px] ${
+                          address.length >= ADDRESS_MAX
+                            ? "text-red-600"
+                            : "text-text-muted"
+                        }`}
+                      >
+                        {address.length}/{ADDRESS_MAX}
+                      </span>
+                    </div>
                     <input
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
-                      placeholder="Av. Siempre Viva 123"
+                      maxLength={ADDRESS_MAX}
+                      className={`w-full border bg-bg px-3 py-2 text-sm outline-none focus:border-accent ${
+                        triedSubmit && address.trim().length < 6
+                          ? "border-red-400"
+                          : "border-border"
+                      }`}
+                      placeholder="Av. Siempre Viva 123, Urb. San Andrés, ref. frente al parque"
                     />
                   </div>
                 </div>
@@ -379,6 +416,17 @@ export default function CheckoutPage() {
               >
                 {submitting ? "Enviando pedido…" : "Confirmar pedido"}
               </button>
+
+              <div className="mt-4 border-t border-dashed border-border pt-3">
+                <p className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-text">
+                  <Lock className="h-3.5 w-3.5 text-accent" strokeWidth={2} />
+                  Compra segura y protegida
+                </p>
+                <p className="mt-1 text-center text-[11px] leading-snug text-text-muted">
+                  Verificamos tu pago antes de coordinar el envío. Tus datos solo
+                  se usan para tu pedido.
+                </p>
+              </div>
             </div>
           </form>
         </div>
