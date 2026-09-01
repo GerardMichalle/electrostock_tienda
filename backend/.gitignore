@@ -6,3 +6,7 @@ uploads/receipts/*
 !uploads/products/.gitkeep
 !uploads/receipts/.gitkeep
 *.log
+
+# scripts temporales de setup (contienen datos sensibles / son de un solo uso)
+set-admin.js
+fix-demo-photos.js

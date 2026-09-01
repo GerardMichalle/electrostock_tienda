@@ -16,23 +16,23 @@ import { FlyToCartProvider } from "@/lib/fly-to-cart";
 // Ajusta este dominio al de producción cuando se despliegue (usado para
 // construir las URL absolutas de las imágenes Open Graph / favicons).
 export const metadata: Metadata = {
-  metadataBase: new URL("https://electrostock.pe"),
-  title: "ElectroStock Perú | Sensores, actuadores y controladores",
+  metadataBase: new URL("https://amytronics.pe"),
+  title: "AMYTRONICS | Sensores, actuadores y controladores",
   description:
     "Tienda de componentes electrónicos y robótica en Perú: sensores, actuadores, controladores y más.",
-  applicationName: "ElectroStock Perú",
+  applicationName: "AMYTRONICS",
   openGraph: {
-    title: "ElectroStock Perú",
+    title: "AMYTRONICS",
     description:
       "Tienda de componentes electrónicos y robótica en Perú: sensores, actuadores, controladores y más.",
     url: "/",
-    siteName: "ElectroStock Perú",
+    siteName: "AMYTRONICS",
     locale: "es_PE",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ElectroStock Perú",
+    title: "AMYTRONICS",
     description:
       "Tienda de componentes electrónicos y robótica en Perú: sensores, actuadores, controladores y más.",
   },

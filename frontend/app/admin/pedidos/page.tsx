@@ -66,7 +66,7 @@ function buildWhatsappLink(order: AdminOrder): string | null {
   const phone = normalizePhone(order.customerPhone);
   if (!phone) return null;
   const message = [
-    `Hola ${order.customerName}, gracias por tu compra en ElectroStock Perú.`,
+    `Hola ${order.customerName}, gracias por tu compra en AMYTRONICS.`,
     "",
     `Pedido: ${order.orderNumber}`,
     "",

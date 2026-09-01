@@ -7,5 +7,5 @@ const app = createApp();
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`API de ElectroStock Perú corriendo en http://localhost:${PORT}`);
+  console.log(`API de AMYTRONICS corriendo en http://localhost:${PORT}`);
 });

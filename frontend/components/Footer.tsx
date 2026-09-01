@@ -17,7 +17,7 @@ export default function Footer() {
         <div>
           <Image
             src={logoFull}
-            alt="ElectroStock Perú — sensores, actuadores y controladores"
+            alt="AMYTRONICS — conecta, crea, innova"
             sizes="256px"
             className="h-auto w-64"
           />
@@ -82,7 +82,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-border px-4 py-4 text-center text-xs text-text-muted sm:px-6">
-        © 2026 ElectroStock Perú. Todos los derechos reservados.
+        © 2026 AMYTRONICS. Todos los derechos reservados.
       </div>
     </footer>
   );

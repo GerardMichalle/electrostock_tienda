@@ -1,7 +1,7 @@
 // Traduce las respuestas de la API a los tipos que ya usa el frontend
 // (`Product`, `Category` de `lib/data.ts`).
 
-import type { Category, Product } from "@/lib/data";
+import type { Category, Product, ProductDetails } from "@/lib/data";
 import { assetUrl } from "@/lib/api";
 
 // ---- Formas que devuelve la API ----
@@ -35,6 +35,7 @@ export type ApiProduct = {
   stock: ApiStock;
   spec: string | null;
   description: string | null;
+  details: ProductDetails | null;
   videoUrl: string | null;
   categoryId: string;
   subcategoryId: string;
@@ -74,6 +75,22 @@ export function adaptCategory(c: ApiCategory): Category {
   };
 }
 
+/** Normaliza la ficha ampliada; devuelve undefined si no trae contenido real. */
+function adaptDetails(d: ProductDetails | null | undefined): ProductDetails | undefined {
+  if (!d) return undefined;
+  const out: ProductDetails = {};
+  if (d.info?.trim()) out.info = d.info.trim();
+  const advantages = (d.advantages ?? []).filter((a) => a?.title && a?.body);
+  if (advantages.length) out.advantages = advantages;
+  const benefits = (d.benefits ?? []).filter(Boolean);
+  if (benefits.length) out.benefits = benefits;
+  const applications = (d.applications ?? []).filter(Boolean);
+  if (applications.length) out.applications = applications;
+  const techSpecs = (d.techSpecs ?? []).filter((t) => t?.label && t?.value);
+  if (techSpecs.length) out.techSpecs = techSpecs;
+  return Object.keys(out).length ? out : undefined;
+}
+
 export function adaptProduct(p: ApiProduct): Product {
   const gallery = (p.images ?? [])
     .slice()
@@ -95,6 +112,7 @@ export function adaptProduct(p: ApiProduct): Product {
     stock: STOCK_FROM_API[p.stock] ?? "En stock",
     spec: p.spec ?? "",
     description: p.description ?? "",
+    details: adaptDetails(p.details),
     image: gallery[0] ?? "",
     gallery,
     videoUrl: p.videoUrl ?? undefined,

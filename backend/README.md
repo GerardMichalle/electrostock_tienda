@@ -1,4 +1,4 @@
-# Backend — ElectroStock Perú
+# Backend — AMYTRONICS
 
 API REST en Node.js + TypeScript + Express, con PostgreSQL vía Prisma.
 

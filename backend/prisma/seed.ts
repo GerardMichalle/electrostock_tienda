@@ -98,7 +98,7 @@ async function upsertAdmin() {
     create: {
       email: ADMIN_EMAIL,
       passwordHash,
-      name: "Admin ElectroStock",
+      name: "Admin AMYTRONICS",
       role: "ADMIN",
     },
   });

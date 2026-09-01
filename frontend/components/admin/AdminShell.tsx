@@ -42,7 +42,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <div className="flex h-16 items-center gap-2 border-b border-border px-5">
           <Image
             src={logoMark}
-            alt="ElectroStock Perú"
+            alt="AMYTRONICS"
             width={28}
             height={28}
             loading="eager"
@@ -96,7 +96,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <span className="flex items-center gap-2">
               <Image
                 src={logoMark}
-                alt="ElectroStock Perú"
+                alt="AMYTRONICS"
                 width={24}
                 height={24}
                 loading="eager"

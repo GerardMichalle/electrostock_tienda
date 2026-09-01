@@ -42,14 +42,14 @@ export default function Header() {
         <Link href="/" className="flex items-center gap-2.5">
           <Image
             src={logoMark}
-            alt="ElectroStock Perú"
+            alt="AMYTRONICS"
             width={36}
             height={36}
             loading="eager"
             className="h-9 w-9"
           />
           <span className="font-display text-lg font-bold uppercase tracking-tight">
-            ElectroStock <span className="text-accent">Perú</span>
+            Amy<span className="text-accent">tronics</span>
           </span>
         </Link>
 

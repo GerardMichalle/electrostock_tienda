@@ -19,6 +19,20 @@ export type Category = {
   productCount?: number;
 };
 
+/** Ficha ampliada opcional del producto (columna `details` en la API). */
+export type ProductDetails = {
+  /** Párrafo introductorio (sección INFO). */
+  info?: string;
+  /** Ventajas: subtítulo + explicación. */
+  advantages?: { title: string; body: string }[];
+  /** Beneficios clave (viñetas). */
+  benefits?: string[];
+  /** Aplicaciones (viñetas). */
+  applications?: string[];
+  /** Especificaciones técnicas: dato / valor. */
+  techSpecs?: { label: string; value: string }[];
+};
+
 export type Product = {
   id?: string;
   slug: string;
@@ -36,6 +50,8 @@ export type Product = {
   spec: string;
   image: string;
   description: string;
+  /** Ficha ampliada; ausente/vacía → la página usa el diseño simple. */
+  details?: ProductDetails;
   gallery: string[];
   videoUrl?: string;
   /** fotos con su id (para poder eliminarlas una por una en el admin). */

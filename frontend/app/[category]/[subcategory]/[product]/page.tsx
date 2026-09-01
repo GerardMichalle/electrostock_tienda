@@ -6,6 +6,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import ProductGallery from "@/components/ProductGallery";
 import AddToCartBar from "@/components/AddToCartBar";
 import ProductCard from "@/components/ProductCard";
+import ProductDetailSections from "@/components/ProductDetailSections";
 import yapeBadge from "@/src/img/yape-badge.png";
 import plinBadge from "@/src/img/plin-badge.png";
 import { ApiError, apiFetch } from "@/lib/api";
@@ -126,6 +127,8 @@ export default async function ProductPage({
               </div>
             </div>
           </div>
+
+          <ProductDetailSections details={product.details} />
 
           {related.length > 0 && (
             <section className="mt-16 border-t border-border pt-10">

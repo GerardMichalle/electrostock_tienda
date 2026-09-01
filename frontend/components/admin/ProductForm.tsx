@@ -2,12 +2,34 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { type Product } from "@/lib/data";
+import { type Product, type ProductDetails } from "@/lib/data";
 import { useCategories, type Result } from "@/lib/admin-store";
 import { STOCK_TO_API } from "@/lib/adapters";
 import ProductImage from "@/components/ProductImage";
+import DetailsEditor from "@/components/admin/DetailsEditor";
 
 type FormMode = "create" | "edit";
+
+/** Recorta textos y descarta filas incompletas antes de enviar la ficha. */
+function cleanDetails(d: ProductDetails): ProductDetails {
+  const out: ProductDetails = {};
+  if (d.info?.trim()) out.info = d.info.trim();
+  const advantages = (d.advantages ?? [])
+    .map((a) => ({ title: a.title.trim(), body: a.body.trim() }))
+    .filter((a) => a.title && a.body);
+  if (advantages.length) out.advantages = advantages;
+  const benefits = (d.benefits ?? []).map((s) => s.trim()).filter(Boolean);
+  if (benefits.length) out.benefits = benefits;
+  const applications = (d.applications ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (applications.length) out.applications = applications;
+  const techSpecs = (d.techSpecs ?? [])
+    .map((t) => ({ label: t.label.trim(), value: t.value.trim() }))
+    .filter((t) => t.label && t.value);
+  if (techSpecs.length) out.techSpecs = techSpecs;
+  return out;
+}
 
 export default function ProductForm({
   mode,
@@ -39,6 +61,9 @@ export default function ProductForm({
   );
   const [spec, setSpec] = useState(initialProduct?.spec ?? "");
   const [description, setDescription] = useState(initialProduct?.description ?? "");
+  const [details, setDetails] = useState<ProductDetails>(
+    initialProduct?.details ?? {},
+  );
   const [videoUrl, setVideoUrl] = useState(initialProduct?.videoUrl ?? "");
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState(
@@ -114,6 +139,9 @@ export default function ProductForm({
     fd.append("stock", STOCK_TO_API[stock]);
     fd.append("spec", spec.trim());
     fd.append("description", description.trim());
+    // La ficha ampliada siempre se envía (aunque vaya vacía) para que al
+    // borrar todos los bloques en edición el backend la deje en NULL.
+    fd.append("details", JSON.stringify(cleanDetails(details)));
     if (videoUrl.trim()) fd.append("videoUrl", videoUrl.trim());
     newFiles.forEach((file) => fd.append("images", file));
 
@@ -253,6 +281,8 @@ export default function ProductForm({
             className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
           />
         </div>
+
+        <DetailsEditor value={details} onChange={setDetails} />
 
         <div className="sm:col-span-2">
           <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-text-muted">

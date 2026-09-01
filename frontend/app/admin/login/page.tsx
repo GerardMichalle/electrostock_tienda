@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
         <div className="mb-6 flex items-center gap-2">
           <Image
             src={logoMark}
-            alt="ElectroStock Perú"
+            alt="AMYTRONICS"
             width={32}
             height={32}
             loading="eager"
@@ -45,7 +45,7 @@ export default function AdminLoginPage() {
         </div>
 
         <p className="mb-6 text-sm text-text-muted">
-          Ingresa con tu cuenta para gestionar el catálogo de ElectroStock Perú.
+          Ingresa con tu cuenta para gestionar el catálogo de AMYTRONICS.
         </p>
 
         <form
@@ -62,7 +62,7 @@ export default function AdminLoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="cliente@electrostock.pe"
+              placeholder="tucorreo@ejemplo.com"
               className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
             />
           </div>

@@ -71,7 +71,7 @@ export function buildOrderPdf(order: OrderWithItems): PDFKit.PDFDocument {
   };
 
   // ---- Encabezado ---------------------------------------------------------
-  doc.font("Helvetica-Bold").fontSize(20).fillColor(INK).text("ElectroStock Perú");
+  doc.font("Helvetica-Bold").fontSize(20).fillColor(INK).text("AMYTRONICS");
   doc
     .font("Helvetica")
     .fontSize(10)
@@ -164,7 +164,7 @@ export function buildOrderPdf(order: OrderWithItems): PDFKit.PDFDocument {
     .fontSize(8)
     .fillColor(MUTED)
     .text(
-      "Documento generado automáticamente por el panel de ElectroStock Perú.",
+      "Documento generado automáticamente por el panel de AMYTRONICS.",
       left,
       doc.y,
       { width: right - left },

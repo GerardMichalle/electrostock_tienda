@@ -8,6 +8,71 @@ import { removeUpload, saveUploads } from "../middleware/upload";
 
 const stockEnum = z.enum(["EN_STOCK", "AGOTADO", "BAJO_PEDIDO"]);
 
+// ---------- Ficha ampliada (columna Product.details, JSON opcional) ----------
+
+const productDetailsSchema = z.object({
+  info: z.string().optional(),
+  advantages: z
+    .array(z.object({ title: z.string(), body: z.string() }))
+    .optional(),
+  benefits: z.array(z.string()).optional(),
+  applications: z.array(z.string()).optional(),
+  techSpecs: z
+    .array(z.object({ label: z.string(), value: z.string() }))
+    .optional(),
+});
+
+type ProductDetails = z.infer<typeof productDetailsSchema>;
+
+/**
+ * `details` llega como string JSON dentro del multipart. Lo parsea; si no es
+ * JSON válido devuelve el valor tal cual para que zod lo rechace con un 400.
+ */
+function parseDetailsField(val: unknown): unknown {
+  if (val === undefined || val === null || val === "") return undefined;
+  if (typeof val !== "string") return val;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return val;
+  }
+}
+
+/**
+ * Limpia la ficha: recorta textos, descarta filas incompletas. Si al final no
+ * queda nada, devuelve `Prisma.DbNull` para dejar la columna en NULL (así la
+ * página del producto usa el diseño simple).
+ */
+function normalizeDetails(
+  d: ProductDetails | undefined,
+): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
+  if (d === undefined) return undefined;
+
+  const info = d.info?.trim();
+  const advantages = (d.advantages ?? [])
+    .map((a) => ({ title: a.title.trim(), body: a.body.trim() }))
+    .filter((a) => a.title && a.body);
+  const benefits = (d.benefits ?? []).map((s) => s.trim()).filter(Boolean);
+  const applications = (d.applications ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const techSpecs = (d.techSpecs ?? [])
+    .map((t) => ({ label: t.label.trim(), value: t.value.trim() }))
+    .filter((t) => t.label && t.value);
+
+  const clean = {
+    ...(info ? { info } : {}),
+    ...(advantages.length ? { advantages } : {}),
+    ...(benefits.length ? { benefits } : {}),
+    ...(applications.length ? { applications } : {}),
+    ...(techSpecs.length ? { techSpecs } : {}),
+  };
+
+  return Object.keys(clean).length
+    ? (clean as Prisma.InputJsonValue)
+    : Prisma.DbNull;
+}
+
 // ---------- Listado público con filtros ----------
 
 export async function listProducts(req: Request, res: Response) {
@@ -63,6 +128,7 @@ const productInputSchema = z.object({
   stock: stockEnum,
   spec: z.string().optional(),
   description: z.string().optional(),
+  details: z.preprocess(parseDetailsField, productDetailsSchema.optional()),
   videoUrl: z.string().url().optional().or(z.literal("")),
 });
 
@@ -102,6 +168,7 @@ export async function createProduct(req: Request, res: Response) {
       stock: data.stock,
       spec: data.spec,
       description: data.description,
+      details: normalizeDetails(data.details),
       videoUrl: data.videoUrl || undefined,
       images: {
         create: imageUrls.map((url, index) => ({ url, order: index })),
@@ -154,6 +221,7 @@ export async function updateProduct(req: Request, res: Response) {
       stock: data.stock,
       spec: data.spec,
       description: data.description,
+      details: normalizeDetails(data.details),
       videoUrl: data.videoUrl || undefined,
       ...(newImageUrls.length > 0
         ? {

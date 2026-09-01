@@ -81,6 +81,10 @@ model Product {
   stock          StockStatus   @default(EN_STOCK)
   spec           String?
   description    String?
+  // Ficha ampliada opcional (INFO / VENTAJAS / BENEFICIOS / APLICACIONES /
+  // ESPECIFICACIONES TÉCNICAS). Forma validada en products.controller.ts.
+  // Si es null, la página del producto usa el diseño simple.
+  details        Json?
   videoUrl       String?
   category       Category      @relation(fields: [categoryId], references: [id])
   categoryId     String
