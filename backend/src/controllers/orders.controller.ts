@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { HttpError } from "../lib/errors";
 import { generateOrderNumber } from "../utils/slugify";
-import { saveUpload } from "../middleware/upload";
+import { saveUpload, removeUpload } from "../middleware/upload";
 import { buildOrderPdf } from "../utils/order-pdf";
 
 const ORDER_STATUSES = [
@@ -149,4 +149,16 @@ export async function updateOrderStatus(req: Request, res: Response) {
     data: { status: parsed.data.status },
   });
   res.json(updated);
+}
+
+export async function deleteOrder(req: Request, res: Response) {
+  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+  if (!order) throw new HttpError(404, "Pedido no encontrado.");
+
+  // Los ítems se borran en cascada (onDelete: Cascade en la relación).
+  await prisma.order.delete({ where: { id: order.id } });
+
+  // Limpia la captura del comprobante; si falla, el pedido ya se borró.
+  await removeUpload(order.receiptUrl).catch(() => {});
+  res.status(204).send();
 }

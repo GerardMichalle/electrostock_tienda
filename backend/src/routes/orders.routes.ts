@@ -8,6 +8,7 @@ import {
   getOrder,
   getOrderReceiptPdf,
   updateOrderStatus,
+  deleteOrder,
 } from "../controllers/orders.controller";
 
 const router = Router();
@@ -29,6 +30,12 @@ router.patch(
   requireAuth,
   requireRole("ADMIN", "STAFF"),
   asyncHandler(updateOrderStatus)
+);
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRole("ADMIN", "STAFF"),
+  asyncHandler(deleteOrder)
 );
 
 export default router;

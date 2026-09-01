@@ -245,24 +245,14 @@ export async function deleteProduct(req: Request, res: Response) {
   });
   if (!product) throw new HttpError(404, "Producto no encontrado.");
 
-  try {
-    await prisma.product.delete({ where: { id } });
-  } catch (err) {
-    // El producto está referenciado por algún pedido (FK Restrict).
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2003"
-    ) {
-      throw new HttpError(
-        409,
-        "No se puede eliminar: el producto aparece en uno o más pedidos. Márcalo como agotado en su lugar.",
-      );
-    }
-    throw err;
-  }
+  // Los ítems de pedidos que referencian este producto conservan su copia de
+  // nombre/precio/cantidad; al borrarlo su `productId` queda en null
+  // (onDelete: SetNull en el schema), así el historial de pedidos no se rompe.
+  await prisma.product.delete({ where: { id } });
 
-  // Borra también las fotos de Cloudinary (las filas se borran en cascada).
-  await Promise.all(product.images.map((img) => removeUpload(img.url)));
+  // Limpia las fotos de Cloudinary (las filas se borran en cascada). Si algo
+  // falla acá el producto ya se borró: no rompemos la respuesta por eso.
+  await Promise.allSettled(product.images.map((img) => removeUpload(img.url)));
   res.status(204).send();
 }
 

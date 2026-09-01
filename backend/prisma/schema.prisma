@@ -133,8 +133,11 @@ model OrderItem {
   id        String  @id @default(cuid())
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId   String
-  product   Product @relation(fields: [productId], references: [id])
-  productId String
+  // Relación opcional: si el producto se elimina del catálogo, este ítem
+  // conserva su copia de nombre/precio/cantidad y `productId` queda en null
+  // (onDelete: SetNull). Así el historial de pedidos nunca se rompe.
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId String?
   name      String
   price     Decimal @db.Decimal(10, 2)
   qty       Int

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ExternalLink, FileDown, MessageCircle } from "lucide-react";
+import { ExternalLink, FileDown, MessageCircle, Trash2 } from "lucide-react";
 import { assetUrl } from "@/lib/api";
 import {
   useAdminOrders,
@@ -83,7 +83,8 @@ function buildWhatsappLink(order: AdminOrder): string | null {
 }
 
 export default function AdminOrdersPage() {
-  const { orders, ready, error, setStatus, downloadReceiptPdf } = useAdminOrders();
+  const { orders, ready, error, setStatus, deleteOrder, downloadReceiptPdf } =
+    useAdminOrders();
   const [filter, setFilter] = useState<OrderStatus | "TODOS">("TODOS");
 
   const visible = useMemo(
@@ -152,6 +153,7 @@ export default function AdminOrdersPage() {
             key={order.id}
             order={order}
             onStatus={setStatus}
+            onDelete={deleteOrder}
             onDownloadPdf={downloadReceiptPdf}
           />
         ))}
@@ -163,15 +165,19 @@ export default function AdminOrdersPage() {
 function OrderCard({
   order,
   onStatus,
+  onDelete,
   onDownloadPdf,
 }: {
   order: AdminOrder;
   onStatus: (id: string, status: OrderStatus) => Promise<Result>;
+  onDelete: (id: string) => Promise<Result>;
   onDownloadPdf: (id: string, orderNumber: string) => Promise<Result>;
 }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [delBusy, setDelBusy] = useState(false);
 
   const waLink = buildWhatsappLink(order);
 
@@ -190,6 +196,18 @@ function OrderCard({
     const res = await onDownloadPdf(order.id, order.orderNumber);
     setPdfBusy(false);
     if (!res.ok) setErr(res.error ?? "No se pudo descargar la boleta.");
+  }
+
+  async function handleDelete() {
+    setDelBusy(true);
+    setErr("");
+    const res = await onDelete(order.id);
+    // si sale bien, la tarjeta desaparece al recargarse la lista
+    if (!res.ok) {
+      setDelBusy(false);
+      setConfirmDel(false);
+      setErr(res.error ?? "No se pudo eliminar el pedido.");
+    }
   }
 
   return (
@@ -321,6 +339,38 @@ function OrderCard({
           <span className="font-mono text-xs text-text-muted">Guardando…</span>
         )}
         {err && <span className="text-xs text-red-600">{err}</span>}
+
+        {confirmDel ? (
+          <span className="ml-auto inline-flex items-center gap-2 text-xs">
+            <span className="text-text-muted">¿Eliminar este pedido?</span>
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={delBusy}
+              className="border border-red-300 bg-red-50 px-2 py-1 font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+            >
+              {delBusy ? "Eliminando…" : "Sí, eliminar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDel(false)}
+              disabled={delBusy}
+              className="border border-border px-2 py-1 text-text-muted transition hover:text-text disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmDel(true)}
+            title="Eliminar el pedido de forma permanente"
+            className="ml-auto inline-flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-red-300 hover:text-red-600"
+          >
+            <Trash2 className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+            Eliminar
+          </button>
+        )}
       </div>
     </article>
   );

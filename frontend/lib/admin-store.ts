@@ -34,9 +34,9 @@ function readToken(): string | null {
   return window.localStorage.getItem(TOKEN_KEY);
 }
 
-// ===========================================================================
-// Store de categorías (lectura pública + escritura admin)
-// ===========================================================================
+
+// Store de categorías (lectura pública + escritura admin) todo detallado
+
 
 type CatState = { list: Category[]; loaded: boolean; error: string | null };
 
@@ -555,12 +555,26 @@ export function useAdminOrders() {
     [],
   );
 
+  const deleteOrder = useCallback(async (id: string): Promise<Result> => {
+    try {
+      await apiFetch(`/api/orders/${id}`, {
+        method: "DELETE",
+        token: readToken(),
+      });
+      await loadOrders(true);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errMsg(e, "No se pudo eliminar el pedido.") };
+    }
+  }, []);
+
   return {
     orders: state.list,
     ready: state.loaded,
     error: state.error,
     reload: () => loadOrders(true),
     setStatus,
+    deleteOrder,
     // función estable a nivel de módulo, no necesita useCallback
     downloadReceiptPdf: downloadOrderReceiptPdf,
   };
