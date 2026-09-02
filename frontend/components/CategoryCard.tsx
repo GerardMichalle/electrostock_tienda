@@ -12,6 +12,10 @@ const images: Record<string, StaticImageData> = {
   controladores: controladoresImg,
 };
 
+// Categorías que se muestran en la grilla "Categorías principales" de la home
+// (las que tienen foto). El resto del catálogo se ve desde el menú "Categorías".
+export const FEATURED_CATEGORY_SLUGS = Object.keys(images);
+
 export default function CategoryCard({ category }: { category: Category }) {
   const image = images[category.slug];
 

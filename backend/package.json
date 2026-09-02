@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "seed": "ts-node --transpile-only prisma/seed.ts"
+    "seed": "ts-node --transpile-only prisma/seed.ts",
+    "setup:catalog": "ts-node --transpile-only prisma/setup-catalog.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

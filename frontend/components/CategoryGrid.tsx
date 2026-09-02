@@ -1,10 +1,11 @@
 "use client";
 
-import CategoryCard from "@/components/CategoryCard";
+import CategoryCard, { FEATURED_CATEGORY_SLUGS } from "@/components/CategoryCard";
 import { useCategoriesState } from "@/lib/admin-store";
 
 export default function CategoryGrid() {
-  const { categories, loading, error } = useCategoriesState();
+  const { categories: all, loading, error } = useCategoriesState();
+  const categories = all.filter((c) => FEATURED_CATEGORY_SLUGS.includes(c.slug));
 
   if (error) {
     return (
