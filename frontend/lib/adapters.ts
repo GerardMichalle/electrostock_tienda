@@ -4,7 +4,7 @@
 import type { Category, Product, ProductDetails } from "@/lib/data";
 import { assetUrl } from "@/lib/api";
 
-// ---- Formas que devuelve la API ----
+// ---- Formas que devuelve la API aca ejemplo ----
 
 export type ApiStock = "EN_STOCK" | "AGOTADO" | "BAJO_PEDIDO";
 
@@ -31,7 +31,8 @@ export type ApiProduct = {
   slug: string;
   sku: string;
   name: string;
-  price: string; // Prisma Decimal → string
+  price: string; // Prisma Decimal → string tipo
+  compareAtPrice: string | null;
   stock: ApiStock;
   spec: string | null;
   description: string | null;
@@ -103,6 +104,8 @@ export function adaptProduct(p: ApiProduct): Product {
     name: p.name,
     sku: p.sku,
     price: Number(p.price),
+    compareAtPrice:
+      p.compareAtPrice != null ? Number(p.compareAtPrice) : undefined,
     categorySlug: p.category?.slug ?? "",
     subcategorySlug: p.subcategory?.slug ?? "",
     categoryName: p.category?.name,

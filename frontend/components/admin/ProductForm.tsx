@@ -50,6 +50,9 @@ export default function ProductForm({
   const [name, setName] = useState(initialProduct?.name ?? "");
   const [sku, setSku] = useState(initialProduct?.sku ?? "");
   const [price, setPrice] = useState(initialProduct?.price?.toString() ?? "");
+  const [compareAtPrice, setCompareAtPrice] = useState(
+    initialProduct?.compareAtPrice?.toString() ?? "",
+  );
   const [categoryId, setCategoryId] = useState(
     initialProduct?.categoryId ?? categories[0]?.id ?? "",
   );
@@ -114,6 +117,15 @@ export default function ProductForm({
       setError("El precio debe ser un número válido.");
       return;
     }
+    if (compareAtPrice.trim()) {
+      const capNum = Number(compareAtPrice);
+      if (Number.isNaN(capNum) || capNum <= priceNum) {
+        setError(
+          "El precio anterior debe ser un número mayor que el precio actual.",
+        );
+        return;
+      }
+    }
     if (!subcategoryId) {
       setError(
         "Esta categoría no tiene subcategorías. Crea una en la sección Categorías antes de publicar aquí.",
@@ -134,6 +146,8 @@ export default function ProductForm({
     fd.append("name", name.trim());
     fd.append("sku", sku.trim());
     fd.append("price", price);
+    // Siempre se envía (aunque vaya vacío) para poder quitar la oferta al editar.
+    fd.append("compareAtPrice", compareAtPrice.trim());
     fd.append("categoryId", categoryId);
     fd.append("subcategoryId", subcategoryId);
     fd.append("stock", STOCK_TO_API[stock]);
@@ -194,6 +208,26 @@ export default function ProductForm({
             placeholder="12.00"
             className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
           />
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
+            Precio anterior (S/) — opcional
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={compareAtPrice}
+            onChange={(e) => setCompareAtPrice(e.target.value)}
+            placeholder="Ej: 24.00"
+            className="w-full border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
+          />
+          <p className="mt-1 font-mono text-[11px] text-text-muted">
+            Si lo llenas (mayor que el precio actual), el producto sale con el
+            precio tachado y entra en la sección <strong>Ofertas</strong> de la
+            tienda. Déjalo vacío para quitar la oferta.
+          </p>
         </div>
 
         <div>

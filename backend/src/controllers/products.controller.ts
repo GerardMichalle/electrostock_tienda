@@ -8,6 +8,18 @@ import { removeUpload, saveUploads } from "../middleware/upload";
 
 const stockEnum = z.enum(["EN_STOCK", "AGOTADO", "BAJO_PEDIDO"]);
 
+/**
+ * Campo de dinero opcional que llega como string en el multipart.
+ * "" / null / undefined → null (limpiar); un número > 0 → ese número.
+ */
+const optionalMoney = z.preprocess(
+  (v) => (v === "" || v === undefined || v === null ? null : v),
+  z.union([
+    z.null(),
+    z.coerce.number().positive("El precio anterior debe ser mayor a 0."),
+  ]),
+);
+
 // ---------- Ficha ampliada (columna Product.details, JSON opcional) ----------
 
 const productDetailsSchema = z.object({
@@ -123,6 +135,7 @@ const productInputSchema = z.object({
   name: z.string().min(1),
   sku: z.string().min(1),
   price: z.coerce.number().nonnegative(),
+  compareAtPrice: optionalMoney.optional(),
   categoryId: z.string().min(1),
   subcategoryId: z.string().min(1),
   stock: stockEnum,
@@ -149,6 +162,13 @@ export async function createProduct(req: Request, res: Response) {
   const skuTaken = await prisma.product.findUnique({ where: { sku: data.sku } });
   if (skuTaken) throw new HttpError(409, "Ya existe un producto con ese SKU.");
 
+  if (data.compareAtPrice != null && data.compareAtPrice <= data.price) {
+    throw new HttpError(
+      400,
+      "El precio anterior debe ser mayor que el precio actual (si no, no es una oferta).",
+    );
+  }
+
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
   if (files.length === 0) {
     throw new HttpError(400, "Sube al menos una foto del producto.");
@@ -163,6 +183,7 @@ export async function createProduct(req: Request, res: Response) {
       sku: data.sku,
       slug,
       price: data.price,
+      compareAtPrice: data.compareAtPrice ?? null,
       categoryId: data.categoryId,
       subcategoryId: data.subcategoryId,
       stock: data.stock,
@@ -196,6 +217,16 @@ export async function updateProduct(req: Request, res: Response) {
     if (skuTaken) throw new HttpError(409, "Ya existe un producto con ese SKU.");
   }
 
+  if (data.compareAtPrice != null) {
+    const effectivePrice = data.price ?? Number(product.price);
+    if (data.compareAtPrice <= effectivePrice) {
+      throw new HttpError(
+        400,
+        "El precio anterior debe ser mayor que el precio actual (si no, no es una oferta).",
+      );
+    }
+  }
+
   // Si cambia la categoría y/o la subcategoría, verifica que sigan siendo
   // coherentes entre sí (misma regla que en createProduct).
   if (data.categoryId || data.subcategoryId) {
@@ -216,6 +247,8 @@ export async function updateProduct(req: Request, res: Response) {
       name: data.name,
       sku: data.sku,
       price: data.price,
+      // undefined = no se envió; null = limpiar; número = fijar
+      compareAtPrice: data.compareAtPrice,
       categoryId: data.categoryId,
       subcategoryId: data.subcategoryId,
       stock: data.stock,

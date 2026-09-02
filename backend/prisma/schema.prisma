@@ -78,6 +78,9 @@ model Product {
   sku            String        @unique
   name           String
   price          Decimal       @db.Decimal(10, 2)
+  // Precio anterior (tachado). Si está y es mayor que `price`, el producto
+  // se muestra "en oferta" y entra en la sección Ofertas de la home.
+  compareAtPrice Decimal?      @db.Decimal(10, 2)
   stock          StockStatus   @default(EN_STOCK)
   spec           String?
   description    String?

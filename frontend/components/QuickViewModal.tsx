@@ -8,6 +8,7 @@ import type { Product } from "@/lib/data";
 import ProductGallery from "@/components/ProductGallery";
 import { useCart } from "@/lib/cart-context";
 import { useFlyToCart } from "@/lib/fly-to-cart";
+import { getSaleInfo, formatSoles } from "@/lib/price";
 
 export default function QuickViewModal({
   product,
@@ -21,6 +22,7 @@ export default function QuickViewModal({
   const galleryRef = useRef<HTMLDivElement>(null);
   const [qty, setQty] = useState(1);
   const soldOut = product.stock === "Agotado";
+  const sale = getSaleInfo(product);
   const href = `/${product.categorySlug}/${product.subcategorySlug}/${product.slug}`;
 
   useEffect(() => {
@@ -100,10 +102,20 @@ export default function QuickViewModal({
               {product.name}
             </h2>
 
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="select-text font-display text-2xl font-bold text-accent">
-                S/ {product.price.toFixed(2)}
+                {formatSoles(sale.price)}
               </span>
+              {sale.was != null && (
+                <>
+                  <span className="select-text text-sm text-text-muted line-through">
+                    {formatSoles(sale.was)}
+                  </span>
+                  <span className="bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white">
+                    −{sale.percentOff}%
+                  </span>
+                </>
+              )}
             </div>
 
             <p className="mt-4 select-text text-sm leading-relaxed text-text-muted">

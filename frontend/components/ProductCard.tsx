@@ -8,6 +8,7 @@ import ProductImage from "@/components/ProductImage";
 import QuickViewModal from "@/components/QuickViewModal";
 import { useCart } from "@/lib/cart-context";
 import { useFlyToCart } from "@/lib/fly-to-cart";
+import { getSaleInfo, formatSoles } from "@/lib/price";
 
 export default function ProductCard({ product }: { product: Product }) {
   const href = `/${product.categorySlug}/${product.subcategorySlug}/${product.slug}`;
@@ -17,6 +18,7 @@ export default function ProductCard({ product }: { product: Product }) {
   const [added, setAdded] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const soldOut = product.stock === "Agotado";
+  const sale = getSaleInfo(product);
 
   function handleAdd() {
     if (!product.id) return;
@@ -44,6 +46,11 @@ export default function ProductCard({ product }: { product: Product }) {
       <span className="cm-br" />
 
       <div className="relative" ref={imageRef}>
+        {sale.onSale && (
+          <span className="absolute left-0 top-0 z-10 bg-red-600 px-1.5 py-0.5 text-[11px] font-bold text-white">
+            −{sale.percentOff}%
+          </span>
+        )}
         <Link
           href={href}
           aria-label={product.name}
@@ -78,10 +85,15 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.spec}
         </p>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-border pt-2">
+        <div className="mt-auto flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-dashed border-border pt-2">
           <span className="select-text font-display text-[15px] font-bold text-accent sm:text-base">
-            S/ {product.price.toFixed(2)}
+            {formatSoles(sale.price)}
           </span>
+          {sale.was != null && (
+            <span className="select-text font-mono text-[11px] text-text-muted line-through">
+              {formatSoles(sale.was)}
+            </span>
+          )}
         </div>
       </Link>
 

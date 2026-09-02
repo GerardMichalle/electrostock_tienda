@@ -11,6 +11,7 @@ import yapeBadge from "@/src/img/yape-badge.png";
 import plinBadge from "@/src/img/plin-badge.png";
 import { ApiError, apiFetch } from "@/lib/api";
 import { adaptProduct, type ApiProduct } from "@/lib/adapters";
+import { getSaleInfo, formatSoles } from "@/lib/price";
 import type { Product } from "@/lib/data";
 
 export const revalidate = 60;
@@ -60,6 +61,7 @@ export default async function ProductPage({
   if (!product) notFound();
 
   const related = await getRelated(product);
+  const sale = getSaleInfo(product);
 
   return (
     <>
@@ -94,10 +96,20 @@ export default async function ProductPage({
                 {product.name}
               </h1>
 
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span className="select-text font-display text-3xl font-bold text-accent">
-                  S/ {product.price.toFixed(2)}
+                  {formatSoles(sale.price)}
                 </span>
+                {sale.was != null && (
+                  <>
+                    <span className="select-text text-base text-text-muted line-through">
+                      {formatSoles(sale.was)}
+                    </span>
+                    <span className="bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
+                      −{sale.percentOff}% OFERTA
+                    </span>
+                  </>
+                )}
                 <span
                   className={`px-2 py-0.5 text-xs font-medium ${stockStyles[product.stock]}`}
                 >

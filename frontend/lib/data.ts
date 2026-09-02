@@ -37,6 +37,8 @@ export type Product = {
   name: string;
   sku: string;
   price: number;
+  /** Precio anterior tachado. Si está y es > price, el producto está "en oferta". */
+  compareAtPrice?: number;
   categorySlug: string;
   subcategorySlug: string;
   categoryName?: string;
