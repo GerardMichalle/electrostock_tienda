@@ -17,7 +17,26 @@ export function createApp() {
   // primer salto para leer bien la IP del cliente (rate-limit) y el protocolo.
   app.set("trust proxy", 1);
 
-  const corsOrigin = process.env.CORS_ORIGIN?.split(",") ?? ["http://localhost:3000"];
+  // Orígenes permitidos para CORS. En producción DEBE venir de CORS_ORIGIN
+  // (la URL real de Vercel, separadas por coma si son varias); en local cae a
+  // localhost:3000. Se recortan espacios y se descartan valores vacíos.
+  const corsOrigin = (process.env.CORS_ORIGIN?.trim() || "http://localhost:3000")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  if (
+    process.env.NODE_ENV === "production" &&
+    corsOrigin.every((o) => o.includes("localhost"))
+  ) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[CORS] En producción CORS_ORIGIN no apunta a un dominio real (${corsOrigin.join(
+        ", ",
+      )}). Configúralo con la URL de Vercel en las variables del backend.`,
+    );
+  }
+
   app.use(cors({ origin: corsOrigin, credentials: true }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
