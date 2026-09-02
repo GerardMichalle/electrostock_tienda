@@ -10,6 +10,7 @@ import {
   Package,
   Store,
   Tags,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 import { useAdminAuth } from "@/lib/admin-store";
@@ -20,6 +21,7 @@ const navItems: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/admin/productos", label: "Productos", Icon: Package },
   { href: "/admin/categorias", label: "Categorías", Icon: Tags },
   { href: "/admin/pedidos", label: "Pedidos", Icon: ClipboardList },
+  { href: "/admin/cuenta", label: "Mi cuenta", Icon: UserCog },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -29,7 +31,7 @@ function isActive(pathname: string, href: string) {
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAdminAuth();
+  const { logout, user } = useAdminAuth();
 
   function handleLogout() {
     logout();
@@ -80,6 +82,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </nav>
 
         <div className="border-t border-border p-3">
+          {user?.email && (
+            <p
+              className="mb-2 truncate px-1 font-mono text-[11px] text-text-muted"
+              title={user.email}
+            >
+              {user.email}
+            </p>
+          )}
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-2 border border-border px-3 py-2 text-left text-sm text-text-muted transition hover:border-accent hover:text-accent"

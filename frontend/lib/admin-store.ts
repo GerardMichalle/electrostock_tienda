@@ -670,5 +670,32 @@ export function useAdminAuth() {
 
   const logout = useCallback(() => clearSession(), []);
 
-  return { isAuthenticated, user: state.user, token: state.token, login, logout };
+  const changePassword = useCallback(
+    async (
+      currentPassword: string,
+      newPassword: string,
+    ): Promise<Result> => {
+      try {
+        await apiFetch("/api/auth/password", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentPassword, newPassword }),
+          token: readToken(),
+        });
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errMsg(e, "No se pudo cambiar la contraseña.") };
+      }
+    },
+    [],
+  );
+
+  return {
+    isAuthenticated,
+    user: state.user,
+    token: state.token,
+    login,
+    logout,
+    changePassword,
+  };
 }
