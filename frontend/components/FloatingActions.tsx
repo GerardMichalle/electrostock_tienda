@@ -19,7 +19,7 @@ import logoMark from "@/src/img/logo-mark.png";
 // Número del negocio en formato internacional, sin "+" ni espacios.
 // Se puede sobrescribir con NEXT_PUBLIC_WHATSAPP_NUMBER en Vercel sin tocar código.
 const WHATSAPP_NUMBER =
-  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") || "51987654321";
+  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") || "51934665410";
 
 const NAME_KEY = "amytronics_wa_name";
 const SHOW_TOP_AFTER = 360; // px de scroll antes de mostrar la flecha
