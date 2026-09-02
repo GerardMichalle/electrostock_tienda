@@ -7,7 +7,7 @@ import FloatingActions from "@/components/FloatingActions";
 import CookieConsent from "@/components/CookieConsent";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://amytronics.pe"),
+  metadataBase: new URL("https://amytronicsperu.com"),
   title: "AMYTRONICS | Sensores, actuadores y controladores",
   description:
     "Tienda de componentes electrónicos y robótica en Perú: sensores, actuadores, controladores y más.",
