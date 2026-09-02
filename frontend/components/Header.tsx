@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useFlyToCart } from "@/lib/fly-to-cart";
@@ -10,9 +11,31 @@ import AnnouncementBar from "@/components/AnnouncementBar";
 import CategoriesNav from "@/components/CategoriesNav";
 import logoMark from "@/src/img/logo-mark.png";
 
+const QUICK_LINKS = [
+  { label: "Novedades", href: "/#novedades" },
+  { label: "Ofertas", href: "/#ofertas" },
+  { label: "Impresión 3D", href: "/#impresiones-3d" },
+];
+
 export default function Header() {
   const { totalItems } = useCart();
   const { setCartTarget, arrivals } = useFlyToCart();
+  const pathname = usePathname();
+
+  // En la home, los enlaces con ancla bajan con scroll suave en vez de saltar.
+  function handleAnchorClick(
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+  ) {
+    const hash = href.split("#")[1];
+    if (!hash || pathname !== "/") return;
+    const el = document.getElementById(hash);
+    if (!el) return;
+    e.preventDefault();
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    history.replaceState(null, "", `#${hash}`);
+  }
 
   const cartRef = useRef<HTMLAnchorElement>(null);
   const [bumping, setBumping] = useState(false);
@@ -57,14 +80,11 @@ export default function Header() {
         </div>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {[
-            { label: "Novedades", href: "/#novedades" },
-            { label: "Ofertas", href: "/#ofertas" },
-            { label: "Impresión 3D", href: "/#impresiones-3d" },
-          ].map((item) => (
+          {QUICK_LINKS.map((item) => (
             <Link
               key={item.label}
               href={item.href}
+              onClick={(e) => handleAnchorClick(e, item.href)}
               className="rounded-sm px-3 py-2 text-sm font-medium text-text transition hover:text-accent"
             >
               {item.label}

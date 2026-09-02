@@ -31,6 +31,22 @@
   border-color: var(--color-border);
 }
 
+/* Scroll suave para los enlaces con ancla del header (#novedades, #ofertas…). */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Las secciones ancladas no deben quedar tapadas por el header fijo. */
+[id="categorias"],
+[id="novedades"],
+[id="ofertas"],
+[id="impresiones-3d"],
+[id="software"] {
+  scroll-margin-top: 120px;
+}
+
 
 @media (min-width: 1024px) {
   .app-zoom {
