@@ -4,6 +4,7 @@ import { CartProvider } from "@/lib/cart-context";
 import { FlyToCartProvider } from "@/lib/fly-to-cart";
 import CustomCursor from "@/components/CustomCursor";
 import FloatingActions from "@/components/FloatingActions";
+import CookieConsent from "@/components/CookieConsent";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://amytronics.pe"),
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </FlyToCartProvider>
         </CartProvider>
         <FloatingActions />
+        <CookieConsent />
       </body>
     </html>
   );

@@ -63,6 +63,14 @@ export default function Footer() {
             <li>Contáctanos</li>
             <li>Envíos y entregas</li>
             <li>Métodos de pago</li>
+            <li>
+              <Link
+                href="/politica-de-cookies"
+                className="transition hover:text-accent"
+              >
+                Política de cookies
+              </Link>
+            </li>
           </ul>
         </div>
 
