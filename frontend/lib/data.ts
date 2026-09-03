@@ -1,10 +1,19 @@
 
 
 export type Subcategory = {
-  
+
   id?: string;
   slug: string;
   name: string;
+};
+
+/** Ajustes de la tienda que el cliente edita desde el panel (datos de pago). */
+export type StoreSettings = {
+  businessName: string | null;
+  yapeNumber: string | null;
+  yapeQrUrl: string | null;
+  plinNumber: string | null;
+  plinQrUrl: string | null;
 };
 
 export type Category = {

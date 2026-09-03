@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { Lock } from "lucide-react";
@@ -8,7 +8,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CountryPhoneInput from "@/components/CountryPhoneInput";
 import { useCart } from "@/lib/cart-context";
-import { apiFetch, ApiError } from "@/lib/api";
+import { useStoreSettings } from "@/lib/admin-store";
+import { apiFetch, ApiError, assetUrl } from "@/lib/api";
 import {
   DEFAULT_COUNTRY,
   type Country,
@@ -21,37 +22,48 @@ import yapeQr from "@/src/img/yape-qr.png";
 
 type PaymentMethod = "yape" | "plin";
 
-const PAYMENT_METHODS: {
-  id: PaymentMethod;
-  label: string;
-  verb: string;
-  logo: StaticImageData;
-  qr?: StaticImageData;
-  phone: string;
-  holder: string;
-}[] = [
-  {
-    id: "yape",
-    label: "Yape",
-    verb: "Yapea",
-    logo: yapeBadge,
-    qr: yapeQr,
-    phone: "934 665 410",
-    holder: "Victor Avalos",
-  },
-  {
-    id: "plin",
-    label: "Plin",
-    verb: "Plinea",
-    logo: plinBadge,
-    phone: "934 665 410",
-    holder: "Victor Avalos",
-  },
-];
+const FALLBACK_PHONE = "934 665 410";
+const FALLBACK_HOLDER = "AMYTRONICS";
 
 export default function CheckoutPage() {
   const { items, ready, totalPrice, clearCart } = useCart();
+  const { settings } = useStoreSettings();
   const [method, setMethod] = useState<PaymentMethod>("yape");
+
+  // Método de pago: número, titular y QR salen de los ajustes que el cliente
+  // edita en el panel (/admin/configuracion). Si no hay QR propio, se usa el
+  // por defecto que viene con el proyecto.
+  const PAYMENT_METHODS: {
+    id: PaymentMethod;
+    label: string;
+    verb: string;
+    logo: StaticImageData;
+    qr?: string;
+    phone: string;
+    holder: string;
+  }[] = useMemo(() => {
+    const holder = settings.businessName || FALLBACK_HOLDER;
+    return [
+      {
+        id: "yape",
+        label: "Yape",
+        verb: "Yapea",
+        logo: yapeBadge,
+        qr: settings.yapeQrUrl ? assetUrl(settings.yapeQrUrl) : yapeQr.src,
+        phone: settings.yapeNumber || FALLBACK_PHONE,
+        holder,
+      },
+      {
+        id: "plin",
+        label: "Plin",
+        verb: "Plinea",
+        logo: plinBadge,
+        qr: settings.plinQrUrl ? assetUrl(settings.plinQrUrl) : undefined,
+        phone: settings.plinNumber || FALLBACK_PHONE,
+        holder,
+      },
+    ];
+  }, [settings]);
   const [name, setName] = useState("");
   const [phoneCountry, setPhoneCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phoneNational, setPhoneNational] = useState("");
@@ -313,13 +325,11 @@ export default function CheckoutPage() {
 
                 <div className="mt-4 flex flex-col items-center gap-4 border border-dashed border-border p-4 text-center sm:flex-row sm:items-center sm:text-left">
                   {activeMethod.qr ? (
-                    <Image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
                       src={activeMethod.qr}
                       alt={`Código QR para pagar con ${activeMethod.label}`}
-                      width={192}
-                      height={204}
-                      unoptimized
-                      className="h-auto w-48 shrink-0 border border-border"
+                      className="h-auto w-48 shrink-0 border border-border bg-white object-contain"
                     />
                   ) : (
                     <div className="flex h-20 w-20 shrink-0 items-center justify-center border border-border bg-bg p-2.5">

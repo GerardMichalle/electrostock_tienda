@@ -42,7 +42,7 @@ if (cloudinaryReady) {
 const ROOT_FOLDER = "electrostock";
 const UPLOAD_ROOT = path.join(__dirname, "..", "..", "uploads");
 
-type Subfolder = "products" | "receipts";
+type Subfolder = "products" | "receipts" | "settings";
 
 const imageFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
   if (!file.mimetype.startsWith("image/")) {
@@ -62,6 +62,7 @@ function makeUploader() {
 
 export const uploadProductImages = makeUploader();
 export const uploadReceipt = makeUploader();
+export const uploadSettings = makeUploader();
 
 /**
  * Guarda el archivo recibido por multer y devuelve la URL que se persiste en

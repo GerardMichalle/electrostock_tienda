@@ -31,6 +31,20 @@ enum OrderStatus {
   ENTREGADO
 }
 
+/// Ajustes editables de la tienda (una sola fila, id = "main").
+/// Hoy: datos de pago que el cliente cambia desde el panel sin tocar código.
+model StoreSettings {
+  id           String   @id @default("main")
+  businessName String? // nombre del titular que se muestra al pagar (empresa)
+  yapeNumber   String?
+  yapeQrUrl    String?
+  plinNumber   String?
+  plinQrUrl    String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("store_settings")
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique

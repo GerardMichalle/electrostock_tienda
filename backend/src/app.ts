@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth.routes";
 import categoriesRoutes from "./routes/categories.routes";
 import productsRoutes from "./routes/products.routes";
 import ordersRoutes from "./routes/orders.routes";
+import settingsRoutes from "./routes/settings.routes";
 
 export function createApp() {
   const app = express();
@@ -50,6 +51,7 @@ export function createApp() {
   app.use("/api/categories", categoriesRoutes);
   app.use("/api/products", productsRoutes);
   app.use("/api/orders", ordersRoutes);
+  app.use("/api/settings", settingsRoutes);
 
   app.use((_req, res) => {
     res.status(404).json({ error: "Ruta no encontrada." });

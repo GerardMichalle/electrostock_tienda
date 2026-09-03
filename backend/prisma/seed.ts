@@ -105,9 +105,24 @@ async function upsertAdmin() {
   });
 }
 
+async function upsertStoreSettings() {
+  // Fila única de ajustes de pago. El cliente los edita luego desde el panel.
+  await prisma.storeSettings.upsert({
+    where: { id: "main" },
+    update: {},
+    create: {
+      id: "main",
+      businessName: "AMYTRONICS",
+      yapeNumber: "934 665 410",
+      plinNumber: "934 665 410",
+    },
+  });
+}
+
 async function main() {
   if (ADMIN_ONLY) {
     await upsertAdmin();
+    await upsertStoreSettings();
     console.log("\nModo admin: sin datos de ejemplo. Catálogo vacío listo para el cliente.");
     return;
   }
@@ -146,6 +161,7 @@ async function main() {
   }
 
   await upsertAdmin();
+  await upsertStoreSettings();
 
   console.log(`Creando ${productsSeed.length} productos de ejemplo…`);
   for (const p of productsSeed) {

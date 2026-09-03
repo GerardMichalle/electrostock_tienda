@@ -3,8 +3,10 @@ dist
 .env
 uploads/products/*
 uploads/receipts/*
+uploads/settings/*
 !uploads/products/.gitkeep
 !uploads/receipts/.gitkeep
+!uploads/settings/.gitkeep
 *.log
 
 # scripts temporales de setup (contienen datos sensibles / son de un solo uso)

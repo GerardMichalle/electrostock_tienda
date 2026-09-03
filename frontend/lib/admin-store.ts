@@ -8,7 +8,7 @@ import {
   type ApiCategory,
   type ApiProduct,
 } from "@/lib/adapters";
-import type { Category, Product } from "@/lib/data";
+import type { Category, Product, StoreSettings } from "@/lib/data";
 
 const TOKEN_KEY = "electro_admin_token";
 
@@ -577,6 +577,95 @@ export function useAdminOrders() {
     deleteOrder,
     // función estable a nivel de módulo, no necesita useCallback
     downloadReceiptPdf: downloadOrderReceiptPdf,
+  };
+}
+
+// ===========================================================================
+// Ajustes de la tienda (datos de pago) — lectura pública + escritura admin
+// ===========================================================================
+
+const EMPTY_SETTINGS: StoreSettings = {
+  businessName: null,
+  yapeNumber: null,
+  yapeQrUrl: null,
+  plinNumber: null,
+  plinQrUrl: null,
+};
+
+type SetState = { data: StoreSettings; loaded: boolean; error: string | null };
+
+let setState_: SetState = { data: EMPTY_SETTINGS, loaded: false, error: null };
+const SET_SERVER: SetState = { data: EMPTY_SETTINGS, loaded: false, error: null };
+const setListeners = new Set<() => void>();
+let setLoading: Promise<void> | null = null;
+
+async function loadSettings(force = false): Promise<void> {
+  if (setLoading) return setLoading;
+  if (setState_.loaded && !force) return;
+  setLoading = (async () => {
+    try {
+      const raw = await apiFetch<StoreSettings>("/api/settings");
+      setState_ = { data: { ...EMPTY_SETTINGS, ...raw }, loaded: true, error: null };
+    } catch (e) {
+      setState_ = {
+        data: setState_.data,
+        loaded: true,
+        error: errMsg(e, "No se pudieron cargar los ajustes."),
+      };
+    } finally {
+      setLoading = null;
+      setListeners.forEach((l) => l());
+    }
+  })();
+  return setLoading;
+}
+
+function subscribeSettings(cb: () => void) {
+  setListeners.add(cb);
+  if (!setState_.loaded) void loadSettings();
+  return () => {
+    setListeners.delete(cb);
+  };
+}
+
+function useSetState(): SetState {
+  return useSyncExternalStore(
+    subscribeSettings,
+    () => setState_,
+    () => SET_SERVER,
+  );
+}
+
+/** Datos de pago para el checkout (lectura pública). */
+export function useStoreSettings() {
+  const s = useSetState();
+  return { settings: s.data, ready: s.loaded, error: s.error };
+}
+
+/** Ajustes + guardado (panel admin). `FormData` porque los QR son imágenes. */
+export function useAdminSettings() {
+  const s = useSetState();
+
+  const save = useCallback(async (formData: FormData): Promise<Result> => {
+    try {
+      await apiFetch("/api/settings", {
+        method: "PATCH",
+        body: formData,
+        token: readToken(),
+      });
+      await loadSettings(true);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errMsg(e, "No se pudo guardar.") };
+    }
+  }, []);
+
+  return {
+    settings: s.data,
+    ready: s.loaded,
+    error: s.error,
+    reload: () => loadSettings(true),
+    save,
   };
 }
 

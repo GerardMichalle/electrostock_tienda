@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ClipboardList,
+  CreditCard,
   LayoutGrid,
   LogOut,
   Package,
@@ -21,6 +22,7 @@ const navItems: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/admin/productos", label: "Productos", Icon: Package },
   { href: "/admin/categorias", label: "Categorías", Icon: Tags },
   { href: "/admin/pedidos", label: "Pedidos", Icon: ClipboardList },
+  { href: "/admin/configuracion", label: "Pagos", Icon: CreditCard },
   { href: "/admin/cuenta", label: "Mi cuenta", Icon: UserCog },
 ];
 
