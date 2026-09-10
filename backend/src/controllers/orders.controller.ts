@@ -15,9 +15,15 @@ const ORDER_STATUSES = [
 ] as const;
 type OrderStatusValue = (typeof ORDER_STATUSES)[number];
 
+// Tope de unidades por línea: coincide con CART_MAX_QTY del frontend. Frena
+// pedidos absurdos o abuso directo de la API con qty gigante.
+const MAX_QTY_PER_ITEM = 99;
+// Nadie llega a 100 productos distintos en un pedido; acota el payload.
+const MAX_DISTINCT_ITEMS = 100;
+
 const orderItemSchema = z.object({
   productId: z.string().min(1),
-  qty: z.coerce.number().int().positive(),
+  qty: z.coerce.number().int().positive().max(MAX_QTY_PER_ITEM),
 });
 
 const orderInputSchema = z.object({
@@ -40,7 +46,11 @@ export async function createOrder(req: Request, res: Response) {
 
   let items: { productId: string; qty: number }[];
   try {
-    items = z.array(orderItemSchema).min(1).parse(JSON.parse(parsed.data.items));
+    items = z
+      .array(orderItemSchema)
+      .min(1)
+      .max(MAX_DISTINCT_ITEMS)
+      .parse(JSON.parse(parsed.data.items));
   } catch {
     throw new HttpError(400, "El carrito enviado es inválido.");
   }

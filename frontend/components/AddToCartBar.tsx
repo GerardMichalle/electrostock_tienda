@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useCart } from "@/lib/cart-context";
+import { useCart, CART_MAX_QTY } from "@/lib/cart-context";
 import { useFlyToCart } from "@/lib/fly-to-cart";
 import type { Product } from "@/lib/data";
 
@@ -12,6 +12,7 @@ export default function AddToCartBar({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const disabled = product.stock === "Agotado";
+  const atMax = qty >= CART_MAX_QTY;
 
   function handleAdd() {
     if (!product.id) return;
@@ -37,7 +38,7 @@ export default function AddToCartBar({ product }: { product: Product }) {
   }
 
   return (
-    <div className="mt-6 flex flex-wrap items-center gap-3">
+    <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
       <div className="flex items-center border border-border">
         <button
           type="button"
@@ -50,8 +51,9 @@ export default function AddToCartBar({ product }: { product: Product }) {
         <span className="w-10 text-center font-mono text-sm">{qty}</span>
         <button
           type="button"
-          onClick={() => setQty((q) => q + 1)}
-          className="px-3 py-2.5 text-sm text-text-muted transition hover:text-accent"
+          onClick={() => setQty((q) => Math.min(CART_MAX_QTY, q + 1))}
+          disabled={atMax}
+          className="px-3 py-2.5 text-sm text-text-muted transition hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Aumentar cantidad"
         >
           +
@@ -66,6 +68,12 @@ export default function AddToCartBar({ product }: { product: Product }) {
       >
         {disabled ? "No disponible" : added ? "✓ Añadido al carrito" : "Añadir al carrito"}
       </button>
+
+      {atMax && (
+        <p className="w-full font-mono text-[11px] text-text-muted">
+          Máximo {CART_MAX_QTY} unidades por producto. ¿Necesitas más? Escríbenos por WhatsApp.
+        </p>
+      )}
     </div>
   );
 }

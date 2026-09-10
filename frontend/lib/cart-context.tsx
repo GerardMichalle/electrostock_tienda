@@ -36,6 +36,17 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "electro_cart";
 
+/**
+ * Tope de unidades por producto. No hay stock numérico en el modelo (solo el
+ * enum EN_STOCK/AGOTADO), así que es un límite fijo y razonable: quien quiera
+ * comprar más cantidad coordina por WhatsApp. También frena que se infle el
+ * carrito a fuerza de clics en "+".
+ */
+export const CART_MAX_QTY = 99;
+
+const clampQty = (n: number) =>
+  Math.min(CART_MAX_QTY, Math.max(1, Math.floor(n) || 1));
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -48,9 +59,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as CartItem[];
-        // Descarta ítems de un carrito viejo sin productId (antes del backend).
+        // Descarta ítems de un carrito viejo sin productId (antes del backend)
+        // y sanea la cantidad (carritos inflados de antes del tope).
         stored = Array.isArray(parsed)
-          ? parsed.filter((i) => i && typeof i.productId === "string")
+          ? parsed
+              .filter((i) => i && typeof i.productId === "string")
+              .map((i) => ({ ...i, qty: clampQty(i.qty) }))
           : [];
       } catch {
         stored = [];
@@ -72,10 +86,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const existing = prev.find((i) => i.slug === item.slug);
       if (existing) {
         return prev.map((i) =>
-          i.slug === item.slug ? { ...i, qty: i.qty + qty } : i
+          i.slug === item.slug ? { ...i, qty: clampQty(i.qty + qty) } : i
         );
       }
-      return [...prev, { ...item, qty }];
+      return [...prev, { ...item, qty: clampQty(qty) }];
     });
   }, []);
 
@@ -85,9 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const updateQty = useCallback((slug: string, qty: number) => {
     setItems((prev) =>
-      prev
-        .map((i) => (i.slug === slug ? { ...i, qty: Math.max(1, qty) } : i))
-        .filter((i) => i.qty > 0)
+      prev.map((i) => (i.slug === slug ? { ...i, qty: clampQty(qty) } : i))
     );
   }, []);
 

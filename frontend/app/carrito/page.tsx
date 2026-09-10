@@ -5,7 +5,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductImage from "@/components/ProductImage";
-import { useCart } from "@/lib/cart-context";
+import { useCart, CART_MAX_QTY } from "@/lib/cart-context";
 import yapeBadge from "@/src/img/yape-badge.png";
 import plinBadge from "@/src/img/plin-badge.png";
 
@@ -64,24 +64,32 @@ export default function CartPage() {
                         </div>
 
                         <div className="flex items-center gap-3 sm:gap-4">
-                          <div className="flex shrink-0 items-center border border-border">
-                            <button
-                              onClick={() => updateQty(item.slug, item.qty - 1)}
-                              className="px-3 py-2 text-sm text-text-muted hover:text-accent"
-                              aria-label="Disminuir cantidad"
-                            >
-                              −
-                            </button>
-                            <span className="w-8 text-center font-mono text-sm">
-                              {item.qty}
-                            </span>
-                            <button
-                              onClick={() => updateQty(item.slug, item.qty + 1)}
-                              className="px-3 py-2 text-sm text-text-muted hover:text-accent"
-                              aria-label="Aumentar cantidad"
-                            >
-                              +
-                            </button>
+                          <div className="flex shrink-0 flex-col items-start gap-1">
+                            <div className="flex items-center border border-border">
+                              <button
+                                onClick={() => updateQty(item.slug, item.qty - 1)}
+                                className="px-3 py-2 text-sm text-text-muted hover:text-accent"
+                                aria-label="Disminuir cantidad"
+                              >
+                                −
+                              </button>
+                              <span className="w-8 text-center font-mono text-sm">
+                                {item.qty}
+                              </span>
+                              <button
+                                onClick={() => updateQty(item.slug, item.qty + 1)}
+                                disabled={item.qty >= CART_MAX_QTY}
+                                className="px-3 py-2 text-sm text-text-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label="Aumentar cantidad"
+                              >
+                                +
+                              </button>
+                            </div>
+                            {item.qty >= CART_MAX_QTY && (
+                              <span className="font-mono text-[10px] text-text-muted">
+                                Máx. {CART_MAX_QTY} uds.
+                              </span>
+                            )}
                           </div>
 
                           <p className="ml-auto shrink-0 select-text text-right font-display text-sm font-bold text-accent sm:ml-0 sm:w-24">

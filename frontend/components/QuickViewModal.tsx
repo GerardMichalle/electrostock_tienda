@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Minus, Plus, X } from "lucide-react";
 import type { Product } from "@/lib/data";
 import ProductGallery from "@/components/ProductGallery";
-import { useCart } from "@/lib/cart-context";
+import { useCart, CART_MAX_QTY } from "@/lib/cart-context";
 import { useFlyToCart } from "@/lib/fly-to-cart";
 import { getSaleInfo, formatSoles } from "@/lib/price";
 
@@ -142,8 +142,9 @@ export default function QuickViewModal({
                 <span className="w-10 text-center font-mono text-sm">{qty}</span>
                 <button
                   type="button"
-                  onClick={() => setQty((q) => q + 1)}
-                  className="px-3 py-2.5 text-text-muted transition hover:text-accent"
+                  onClick={() => setQty((q) => Math.min(CART_MAX_QTY, q + 1))}
+                  disabled={qty >= CART_MAX_QTY}
+                  className="px-3 py-2.5 text-text-muted transition hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="Aumentar cantidad"
                 >
                   <Plus className="h-3.5 w-3.5" strokeWidth={1.75} />
